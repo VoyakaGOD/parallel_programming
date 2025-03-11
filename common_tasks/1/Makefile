@@ -1,11 +1,14 @@
 BUILD_FOLDER = exe
 SHARED_FOLDER = ../../shared
+TASKS = hello sum
 
-.PHONY: all
+.PHONY: all clean
 
-all: $(BUILD_FOLDER)/hello
+all: $(addprefix $(BUILD_FOLDER)/, $(TASKS))
 
-$(BUILD_FOLDER)/hello: hello.cpp
+$(BUILD_FOLDER)/%: %.cpp
 	mkdir -p $(BUILD_FOLDER)
-	mpic++ hello.cpp -I$(SHARED_FOLDER) -o$(BUILD_FOLDER)/hello
+	mpic++ $< -I$(SHARED_FOLDER) -o $@
 
+clean:
+	rm -rf $(BUILD_FOLDER)
