@@ -1,6 +1,6 @@
 BUILD_FOLDER = exe
 SHARED_FOLDER = ../../shared
-TASKS = hello sum msg
+TASKS = hello sum msg snd
 
 .PHONY: all clean
 
