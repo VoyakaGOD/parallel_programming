@@ -1,3 +1,3 @@
 # General
 
-This is a repository with solutions to parallel programming problems using the MPI interface.
+This is a repository with solutions to parallel programming problems using the MPI interface and C++.
