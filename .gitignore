@@ -1,4 +1,4 @@
 .vscode/
 .vscode_includes/
-results/
-exe/
+/results/
+/executables/

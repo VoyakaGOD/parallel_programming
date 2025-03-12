@@ -1,4 +1,4 @@
-BUILD_FOLDER = exe
+BUILD_FOLDER = ../../executables
 SHARED_FOLDER = ../../shared
 TASKS = hello sum msg snd
 
