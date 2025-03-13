@@ -28,6 +28,10 @@ BigDecimal BigDecimal::getOne(size_t ibc, size_t fbc, size_t precision)
     return value;
 }
 
+const std::vector<uint32_t> &BigDecimal::getData() const { return data; }
+
+std::vector<uint32_t> &BigDecimal::getData() { return data; }
+
 BigDecimal &BigDecimal::operator+=(const BigDecimal &other)
 {
     compare(other);

@@ -36,6 +36,10 @@ public:
     // create BigDecimal[0...01.0....0]
     static BigDecimal getOne(size_t ibc, size_t fbc, size_t precision);
 
+    const std::vector<uint32_t> &getData() const;
+
+    std::vector<uint32_t> &getData();
+
     BigDecimal &operator+=(const BigDecimal &other);
 
     BigDecimal &operator/=(uint32_t divisor);
