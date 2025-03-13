@@ -1,6 +1,6 @@
 #include <big_decimal.hpp>
 
-void BigDecimal::compare(const BigDecimal &other)
+void BigDecimal::compare(const BigDecimal &other) const
 {
     if((fbc != other.fbc) || (data.size() != other.data.size()))
         throw std::runtime_error("This big decimal implementaion works only with objects with same ibc and fbc");
@@ -56,9 +56,9 @@ BigDecimal &BigDecimal::operator/=(uint32_t divisor)
     return *this;
 }
 
-BigDecimal BigDecimal::operator*(const BigDecimal &other)
+BigDecimal operator*(const BigDecimal &left, const BigDecimal &right)
 {
-    compare(other);
+    left.compare(right);
 
     //todo
     return BigDecimal(1, 1, 1);

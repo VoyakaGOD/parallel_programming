@@ -1,2 +1,5 @@
 #!/bin/sh
-mpirun -np $2 $1
+name="$1"
+np="$2"
+shift 2
+mpirun -np $np $name $@

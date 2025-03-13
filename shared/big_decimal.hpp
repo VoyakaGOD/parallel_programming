@@ -11,6 +11,7 @@
 #include <string>
 #include <stdexcept>
 #include <iostream>
+#include <cstdint>
 
 class BigDecimal
 {
@@ -24,7 +25,7 @@ private:
     std::vector<uint32_t> data;
 
 private:
-    void compare(const BigDecimal &other);
+    void compare(const BigDecimal &other) const;
 
 public:
     // create BigDecimal[0...0.0....0]
@@ -39,7 +40,7 @@ public:
 
     BigDecimal &operator/=(uint32_t divisor);
 
-    BigDecimal operator*(const BigDecimal &other);
+    friend BigDecimal operator*(const BigDecimal &left, const BigDecimal &right);
 
     friend std::ostream &operator<<(std::ostream &os, const BigDecimal &value);
 };

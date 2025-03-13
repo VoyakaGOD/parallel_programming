@@ -1,1 +1,5 @@
-sbatch --ntasks=$2 --error=results/$1-%j.err --output=results/$1-%j.out SLURM_script.sh executables/$1 $2
+#!/bin/sh
+name="$1"
+np="$2"
+shift 2
+sbatch --ntasks=$np --error=results/$name-%j.err --output=results/$name-%j.out SLURM_script.sh executables/$name $np $@
