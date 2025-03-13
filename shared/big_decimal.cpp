@@ -60,8 +60,45 @@ BigDecimal operator*(const BigDecimal &left, const BigDecimal &right)
 {
     left.compare(right);
 
-    //todo
-    return BigDecimal(1, 1, 1);
+    size_t size = left.data.size();
+    size_t fbc = left.fbc;
+    size_t ibc = size - fbc;
+    BigDecimal product(ibc, fbc, left.precision);
+
+    uint32_t *tail = new uint32_t[fbc];
+    if(tail == nullptr)
+        throw std::runtime_error("Can't allocate memory for BigDecimal multiplication");
+
+    for (size_t i = 0; i < size; i++)
+    {
+        uint64_t carry = 0;
+        for (size_t j = 0; j < size; j++)
+        {
+            uint32_t *product_data = nullptr;
+            if(i + j < fbc)
+            {
+                // k = i + j - fbc < 0
+                product_data = tail + fbc - i - j - 1;
+            }
+            else
+            {
+                size_t k = i + j - fbc;
+                if(k == size)
+                    break;
+                product_data = &product.data[k];
+            }
+
+            uint64_t value = static_cast<uint64_t>(left.data[i]) * right.data[j] + *product_data + carry;
+            *product_data = static_cast<uint32_t>(value % BigDecimal::base);
+            carry = value / BigDecimal::base;
+        }
+
+        if(i < fbc)
+            product.data[ibc + i] = static_cast<uint32_t>(carry); // j = size
+    }
+
+    delete[] tail;
+    return product;
 }
 
 static void send_segment_to(std::ostream &os, uint32_t seg_value)
