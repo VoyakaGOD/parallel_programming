@@ -9,16 +9,19 @@ using namespace std::chrono_literals;
 #define BARRIER TRY(MPI_Barrier(MPI_COMM_WORLD), "Can't create barrier")
 
 template <typename SendFuncType>
-void measure_send_time(const char *label, SendFuncType send, int buff_size, int rank)
+double measure_send_time(const char *label, SendFuncType send, int buff_size, int rank)
 {
+    double result = 0;
     char *buff = new char[buff_size];
+
     if(rank == 0)
     {
         auto start = std::chrono::system_clock::now();
         TRY(send(buff, buff_size, MPI_CHAR, 1, 0, MPI_COMM_WORLD), "Can't send msg");
         auto end = std::chrono::system_clock::now();
         std::chrono::duration<double> time = end - start;
-        std::cout << label << ", time: " << std::round(time.count()) << "s, buffer size: " << buff_size << std::endl;
+        result = time.count();
+        std::cout << label << ", time: " << std::round(result) << "s, buffer size: " << buff_size << std::endl;
     }
     else if(rank == 1)
     {
@@ -26,7 +29,9 @@ void measure_send_time(const char *label, SendFuncType send, int buff_size, int 
         TRY(MPI_Recv(buff, buff_size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
             "Can't receive msg");
     }
+
     delete[] buff;
+    return result;
 }
 
 int main(int argc, char** argv)
@@ -88,18 +93,28 @@ int main(int argc, char** argv)
 
     if(rank == 0) std::cout << std::endl; BARRIER;
 
-    measure_send_time("_send", MPI_Send, 69550, rank); BARRIER;
-    measure_send_time("_send", MPI_Send, 69551, rank); BARRIER;
-    measure_send_time("_send", MPI_Send, 69552, rank); BARRIER;
-    measure_send_time("_send", MPI_Send, 69553, rank); BARRIER;
-    measure_send_time("_send", MPI_Send, 69554, rank); BARRIER;
-    measure_send_time("_send", MPI_Send, 69555, rank); BARRIER;
-    measure_send_time("_send", MPI_Send, 69556, rank); BARRIER;
-    measure_send_time("_send", MPI_Send, 69557, rank); BARRIER;
-    measure_send_time("_send", MPI_Send, 69558, rank); BARRIER;
-    measure_send_time("_send", MPI_Send, 69559, rank);
+    // search for buffer size limit for _send
+    int step = 10000;
+    int value = 10 * step;
+    while(step > 0)
+    {
+        int next_value = 0;
+        for(int i = 0; i < 10; i++)
+        {
+            if(measure_send_time("_send", MPI_Send, value, rank) < 0.5)
+            {
+                if(next_value == 0)
+                    next_value = value + step;
+            }
+            value -= step;
+            BARRIER;
+        }
+        value = (next_value > 0) ? next_value : step;
+        step /= 10;
+    }
+
+    if(rank == 0) std::cout << "Max buffered _send msg size: " << (value - 1) << std::endl;
 
     TRY(MPI_Finalize(), "Bad MPI finalization");
-    
     return 0;
 }
