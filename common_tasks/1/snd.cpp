@@ -106,6 +106,10 @@ int main(int argc, char** argv)
                 if(next_value == 0)
                     next_value = value + step;
             }
+            else
+            {
+                next_value = 0;
+            }
             value -= step;
             BARRIER;
         }
