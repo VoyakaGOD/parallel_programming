@@ -6,8 +6,6 @@
 
 using namespace std::chrono_literals;
 
-#define BARRIER TRY(MPI_Barrier(MPI_COMM_WORLD), "Can't create barrier")
-
 template <typename SendFuncType>
 double measure_send_time(const char *label, SendFuncType send, int buff_size, int rank)
 {
