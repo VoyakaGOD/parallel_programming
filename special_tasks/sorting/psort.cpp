@@ -100,20 +100,8 @@ void hybrid_sort(uint64_t *array, int size)
         merge_sort(array, 0, size - 1);
 }
 
-int main(int argc, char** argv)
+void measure_time(int N, int rank, int world_size, std::string alg)
 {
-    TRY(MPI_Init(&argc, &argv), "Bad MPI initialization");
-
-    int rank;
-    TRY(MPI_Comm_rank(MPI_COMM_WORLD, &rank), "Can't get rank of this process");
-
-    int world_size;
-    TRY(MPI_Comm_size(MPI_COMM_WORLD, &world_size), "Can't get total count of processes");
-    TRY(!is_power_of_two(world_size), "Processes count should be power of two");
-
-    TRY(argc < 2, "You should enter array size");
-    int N = atoi(argv[1]);
-    TRY(N <= 0, "Array size should be positive value");
     N += N % world_size;
 
     uint64_t *array = new uint64_t[N];
@@ -140,11 +128,11 @@ int main(int argc, char** argv)
     MPI_Scatter(unordered_array, partition_size, MPI_UINT64_T, array + from, 
         partition_size, MPI_UINT64_T, 0, MPI_COMM_WORLD);
 
-    if(argc >= 3)
+    if(alg != "")
     {
-        if(argv[2] == std::string("hybrid"))
+        if(alg == "hybrid")
             hybrid_sort(array + from, partition_size);
-        else if(argv[2] == std::string("radix"))
+        else if(alg == "radix")
             radix_sort(array + from, partition_size);
         else
             throw std::runtime_error("Unknown soring algorithm name");
@@ -176,16 +164,47 @@ int main(int argc, char** argv)
     {
         double end = MPI_Wtime();
 
-        std::cout << array[0];
-        for(int i = 1; i < std::min(N, 100); i++)
-            std::cout << ", " << array[i];
-        std::cout << std::endl;
+        // std::cout << array[0];
+        // for(int i = 1; i < std::min(N, 100); i++)
+        //     std::cout << ", " << array[i];
+        // std::cout << std::endl;
 
-        std::cout << "time: " << (end - start) << " s" << std::endl;
+        std::cout << (end - start) << ", ";
         delete[] unordered_array;
     }
 
     delete[] array;
+}
+
+int main(int argc, char** argv)
+{
+    TRY(MPI_Init(&argc, &argv), "Bad MPI initialization");
+
+    int rank;
+    TRY(MPI_Comm_rank(MPI_COMM_WORLD, &rank), "Can't get rank of this process");
+
+    int world_size;
+    TRY(MPI_Comm_size(MPI_COMM_WORLD, &world_size), "Can't get total count of processes");
+    TRY(!is_power_of_two(world_size), "Processes count should be power of two");
+
+    TRY(argc < 4, "You should enter array initial size, step size, steps count");
+    int N = atoi(argv[1]);
+    TRY(N <= 0, "Array size should be positive value");
+    int step = atoi(argv[2]);
+    int count = atoi(argv[3]);
+    TRY(count <= 0, "Steps count should be positive value");
+
+    for(int i = 0; i < count; i++)
+    {
+        measure_time(N, rank, world_size, std::string((argc > 4) ? argv[4] : ""));
+        if(step < 0)
+            N *= (-step);
+        else
+            N += step;
+    }
+
+    if(rank == 0)
+        std::cout << std::endl;
     TRY(MPI_Finalize(), "Bad MPI finalization");
     return 0;
 }
