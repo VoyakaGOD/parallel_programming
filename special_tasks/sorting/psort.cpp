@@ -188,7 +188,7 @@ int main(int argc, char** argv)
     for(int i = 0; i < count; i++)
     {
         double time = 0;
-        for(int j = 0; j < 10; j++)
+        for(int j = 0; j < 30; j++)
             time += measure_time(N, rank, world_size, std::string((argc > 4) ? argv[4] : ""));
         if(rank == 0)
             std::cout << (time / 10) << ", ";
