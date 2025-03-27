@@ -100,7 +100,7 @@ void hybrid_sort(uint64_t *array, int size)
         merge_sort(array, 0, size - 1);
 }
 
-void measure_time(int N, int rank, int world_size, std::string alg)
+double measure_time(int N, int rank, int world_size, std::string alg)
 {
     N += N % world_size;
 
@@ -159,21 +159,12 @@ void measure_time(int N, int rank, int world_size, std::string alg)
                 MPI_UINT64_T, rank - i, 0, MPI_COMM_WORLD), "Can't send msg");
         }
     }
-
+    
+    double end = MPI_Wtime();
     if(rank == 0)
-    {
-        double end = MPI_Wtime();
-
-        // std::cout << array[0];
-        // for(int i = 1; i < std::min(N, 100); i++)
-        //     std::cout << ", " << array[i];
-        // std::cout << std::endl;
-
-        std::cout << (end - start) << ", ";
         delete[] unordered_array;
-    }
-
     delete[] array;
+    return (end - start);
 }
 
 int main(int argc, char** argv)
@@ -196,7 +187,11 @@ int main(int argc, char** argv)
 
     for(int i = 0; i < count; i++)
     {
-        measure_time(N, rank, world_size, std::string((argc > 4) ? argv[4] : ""));
+        double time = 0;
+        for(int j = 0; j < 10; j++)
+            time += measure_time(N, rank, world_size, std::string((argc > 4) ? argv[4] : ""));
+        if(rank == 0)
+            std::cout << (time / 10) << ", ";
         if(step < 0)
             N *= (-step);
         else
