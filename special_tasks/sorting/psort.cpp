@@ -92,7 +92,7 @@ void radix_sort(uint64_t *array, int size)
 
 void hybrid_sort(uint64_t *array, int size)
 {
-    const int n0 = 50000;
+    const int n0 = 30000;
 
     if(size > n0)
         radix_sort(array, size);
