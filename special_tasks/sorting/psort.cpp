@@ -92,14 +92,10 @@ void radix_sort(uint64_t *array, int size)
 
 void hybrid_sort(uint64_t *array, int size)
 {
-    const double alpha = 0.88;
+    const int n0 = 50000;
 
-    int digits_count = 0;
-    for(int i = 0; i < size; i++)
-        digits_count = std::max(digits_count, count_4_bit_groups(array[i]));
-
-    if(digits_count < alpha * std::log(size))
-        RadixSorter::sort(array, size, digits_count);
+    if(size > n0)
+        radix_sort(array, size);
     else
         merge_sort(array, 0, size - 1);
 }
@@ -185,7 +181,7 @@ int main(int argc, char** argv)
             std::cout << ", " << array[i];
         std::cout << std::endl;
 
-        std::cout << "time: " << (end - start) << " s";
+        std::cout << "time: " << (end - start) << " s" << std::endl;
         delete[] unordered_array;
     }
 
