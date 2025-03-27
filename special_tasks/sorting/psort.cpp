@@ -1,5 +1,16 @@
-#include <mpi_try.hpp>
+#include "radix_sort.hpp"
 #include <random>
+
+int count_4_bit_groups(uint64_t n)
+{
+    int count = 0;
+    while (n > 0)
+    {
+        count++;
+        n >>= 4;
+    }
+    return count;
+}
 
 // only for positive numbers
 bool is_power_of_two(int n)
@@ -7,16 +18,16 @@ bool is_power_of_two(int n)
     return (n & (n - 1)) == 0;
 }
 
-int *copy(int *original, int size)
+uint64_t *copy(uint64_t *original, int size)
 {
-    int *copy = new int[size];
+    uint64_t *copy = new uint64_t[size];
     TRY(copy == nullptr, "Can't allocate memory for copying array");
     for(int i = 0; i < size; i++)
         copy[i] = original[i];
     return copy;
 }
 
-void merge(int *array, int *left, int left_len, int *right, int right_len)
+void merge(uint64_t *array, uint64_t *left, int left_len, uint64_t *right, int right_len)
 {
     left = copy(left, left_len);
     right = copy(right, right_len);
@@ -55,19 +66,42 @@ void merge(int *array, int *left, int left_len, int *right, int right_len)
     delete[] right;
 }
 
-void sort(int *array, int left, int right)
+void merge_sort(uint64_t *array, int left, int right)
 {
     if(left >= right)
         return;
     
     int mid = left + (right - left) / 2;
     
-    sort(array, left, mid);
-    sort(array, mid + 1, right);
+    merge_sort(array, left, mid);
+    merge_sort(array, mid + 1, right);
     
     int left_size = mid - left + 1;
     int right_size = right - mid;
     merge(array + left, array + left, left_size, array + mid + 1, right_size);
+}
+
+void radix_sort(uint64_t *array, int size)
+{
+    int digits_count = 0;
+    for(int i = 0; i < size; i++)
+        digits_count = std::max(digits_count, count_4_bit_groups(array[i]));
+
+    RadixSorter::sort(array, size, digits_count);
+}
+
+void hybrid_sort(uint64_t *array, int size)
+{
+    const double alpha = 0.88;
+
+    int digits_count = 0;
+    for(int i = 0; i < size; i++)
+        digits_count = std::max(digits_count, count_4_bit_groups(array[i]));
+
+    if(digits_count < alpha * std::log(size))
+        RadixSorter::sort(array, size, digits_count);
+    else
+        merge_sort(array, 0, size - 1);
 }
 
 int main(int argc, char** argv)
@@ -86,17 +120,17 @@ int main(int argc, char** argv)
     TRY(N <= 0, "Array size should be positive value");
     N += N % world_size;
 
-    int *array = new int[N];
+    uint64_t *array = new uint64_t[N];
     TRY(array == nullptr, "Can't allocate memory for array");
 
-    int *unordered_array = nullptr;
+    uint64_t *unordered_array = nullptr;
     if(rank == 0)
     {
         std::random_device device;
-        std::mt19937 engine(device());
-        std::uniform_int_distribution<std::mt19937::result_type> random(0, 7*N);
+        std::mt19937_64 engine(device());
+        std::uniform_int_distribution<std::mt19937_64::result_type> random(0, -1ull);
 
-        unordered_array = new int[N];
+        unordered_array = new uint64_t[N];
         TRY(unordered_array == nullptr, "Can't allocate memory for array");
         for(int i = 0; i < N; i++)
             unordered_array[i] = random(engine);
@@ -107,11 +141,23 @@ int main(int argc, char** argv)
 
     double start = MPI_Wtime();
 
-    MPI_Scatter(unordered_array, partition_size, MPI_INT, array + from, partition_size, MPI_INT, 0, MPI_COMM_WORLD);
-    if(rank == 0)
-        delete[] unordered_array;
-    
-    sort(array + from, 0, partition_size - 1);
+    MPI_Scatter(unordered_array, partition_size, MPI_UINT64_T, array + from, 
+        partition_size, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+
+    if(argc >= 3)
+    {
+        if(argv[2] == std::string("hybrid"))
+            hybrid_sort(array + from, partition_size);
+        else if(argv[2] == std::string("radix"))
+            radix_sort(array + from, partition_size);
+        else
+            throw std::runtime_error("Unknown soring algorithm name");
+    }
+    else
+    {
+        merge_sort(array + from, 0, partition_size - 1);
+    }
+
     for(int i = 1; i < world_size; i <<= 1)
     {
         if((rank % i) != 0)
@@ -120,13 +166,13 @@ int main(int argc, char** argv)
         if((rank / i) % 2 == 0)
         {
             TRY(MPI_Recv(array + from + i*partition_size, i*partition_size,
-                MPI_INT, rank + i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE), "Can't receive msg");
+                MPI_UINT64_T, rank + i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE), "Can't receive msg");
             merge(array, array + from, i*partition_size, array + from + i*partition_size, i*partition_size);
         }
         else
         {
             TRY(MPI_Send(array + from, i*partition_size,
-                MPI_INT, rank - i, 0, MPI_COMM_WORLD), "Can't receive msg");
+                MPI_UINT64_T, rank - i, 0, MPI_COMM_WORLD), "Can't send msg");
         }
     }
 
@@ -135,11 +181,12 @@ int main(int argc, char** argv)
         double end = MPI_Wtime();
 
         std::cout << array[0];
-        for(int i = 1; i < std::min(N, 1000); i++)
+        for(int i = 1; i < std::min(N, 100); i++)
             std::cout << ", " << array[i];
         std::cout << std::endl;
 
         std::cout << "time: " << (end - start) << " s";
+        delete[] unordered_array;
     }
 
     delete[] array;

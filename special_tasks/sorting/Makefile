@@ -1,6 +1,6 @@
 BUILD_FOLDER = ../../executables
 SHARED_FOLDER = ../../shared
-TASKS = parallel_merge_sort
+TASKS = psort
 
 .PHONY: all clean
 
