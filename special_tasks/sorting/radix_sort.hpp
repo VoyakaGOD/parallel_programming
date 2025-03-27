@@ -4,6 +4,7 @@
 #define SPECIAL_RADIX_SORT
 
 #include <mpi_try.hpp>
+#include <cstdint>
 #include <cstring>
 
 class RadixSorter
