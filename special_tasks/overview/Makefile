@@ -1,6 +1,6 @@
 BUILD_FOLDER = ../../executables
 SHARED_FOLDER = ../../shared
-TASKS = spawn spawn.aux
+TASKS = spawn spawn.aux files
 
 .PHONY: all clean
 
