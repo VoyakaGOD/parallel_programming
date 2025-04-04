@@ -11,8 +11,11 @@ int main(int argc, char** argv)
     int world_size;
     TRY(MPI_Comm_size(MPI_COMM_WORLD, &world_size), "Can't get total count of processes");
 
+    MPI_Comm reversed_comm;
     MPI_File file;
-    TRY(MPI_File_open(MPI_COMM_WORLD, "./results/files_out.txt", MPI_MODE_CREATE | MPI_MODE_WRONLY, 
+    TRY(MPI_Comm_split(MPI_COMM_WORLD, 1, world_size - 1 - rank, &reversed_comm),
+        "Can't create reversed communicator");
+    TRY(MPI_File_open(reversed_comm, "./results/files_out.txt", MPI_MODE_CREATE | MPI_MODE_WRONLY, 
         MPI_INFO_NULL, &file), "Can't open file");
     TRY(MPI_File_set_size(file, 0), "Can't clear file");
 
