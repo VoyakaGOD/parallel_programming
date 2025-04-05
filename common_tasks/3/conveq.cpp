@@ -22,7 +22,13 @@ const int M = static_cast<int>(X / h);
 
 int main(int argc, char** argv)
 {
+    TRY(MPI_Init(&argc, &argv), "Bad MPI initialization");
+
+    bool measurement = (argc > 1) && (argv[1] == std::string("-m"));
+
     Grid u(K + 1);
+
+    double start = MPI_Wtime();
 
     // initial conditions
     u[0].resize(M + 1);
@@ -47,17 +53,33 @@ int main(int argc, char** argv)
         u[k][M] = solveByCornerScheme(u, k, M);
     }
 
-    std::ofstream file(OUTPUT_FILE, std::ios::binary);
-    file.write(reinterpret_cast<const char *>(&K), sizeof(int));
-    file.write(reinterpret_cast<const char *>(&M), sizeof(int));
-    file.write(reinterpret_cast<const char *>(&tau), sizeof(double));
-    file.write(reinterpret_cast<const char *>(&h), sizeof(double));
-    file.write(reinterpret_cast<const char *>(&c), sizeof(double));
-    for(int k = 0; k <= K; k++)
+    double solving_time = MPI_Wtime() - start;
+
+    if(!measurement)
     {
-        for(int m = 0; m <= M; m++)
-            file.write(reinterpret_cast<const char *>(&u[k][m]), sizeof(double));
+        std::ofstream file(OUTPUT_FILE, std::ios::binary);
+        file.write(reinterpret_cast<const char *>(&K), sizeof(int));
+        file.write(reinterpret_cast<const char *>(&M), sizeof(int));
+        file.write(reinterpret_cast<const char *>(&tau), sizeof(double));
+        file.write(reinterpret_cast<const char *>(&h), sizeof(double));
+        file.write(reinterpret_cast<const char *>(&c), sizeof(double));
+        for(int k = 0; k <= K; k++)
+        {
+            for(int m = 0; m <= M; m++)
+                file.write(reinterpret_cast<const char *>(&u[k][m]), sizeof(double));
+        }
     }
+
+    double total_time = MPI_Wtime() - start;
+    std::cout << "K = " << K << std::endl;
+    std::cout << "M = " << M << std::endl;
+    std::cout << "c = " << c << std::endl;
+    std::cout << "sequential" << std::endl;
+    std::cout << "solving time: " << solving_time << " s" << std::endl;
+    std::cout << "writing time: " << (total_time - solving_time) << " s" << std::endl;
+    std::cout << "total   time: " << total_time << " s" << std::endl;
+
+    TRY(MPI_Finalize(), "Bad MPI finalization");
 
     return 0;
 }

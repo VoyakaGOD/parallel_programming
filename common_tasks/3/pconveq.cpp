@@ -1,6 +1,7 @@
 #include <mpi_try.hpp>
 #include "config.hpp"
 #include <vector>
+#include <string>
 
 typedef std::vector<std::vector<double>> Grid; //u[t][x]
 
@@ -32,7 +33,11 @@ int main(int argc, char** argv)
     int buffer_size = sizeof(double) * 4 + MPI_BSEND_OVERHEAD;
     TRY(MPI_Buffer_attach(new char[buffer_size], buffer_size), "Can't attach buffer for Bsend");
 
+    bool measurement = (argc > 1) && (argv[1] == std::string("-m"));
+
     Grid u(K + 1);
+    double start = MPI_Wtime();
+
     int partition_size = M / world_size;
     int last = world_size - 1;
     int min_m = (rank == 0) ? 1 : (rank * partition_size);
@@ -111,27 +116,44 @@ int main(int argc, char** argv)
         }
     }
 
-    MPI_File file;
-    TRY(MPI_File_open(MPI_COMM_WORLD, OUTPUT_FILE, MPI_MODE_CREATE | MPI_MODE_WRONLY, 
-        MPI_INFO_NULL, &file), "Can't open file");
-    TRY(MPI_File_set_size(file, 0), "Can't clear file");
+    double solving_time = MPI_Wtime() - start;
 
-    if(rank == 0)
+    if(!measurement)
     {
-        TRY(MPI_File_write(file, &K, 1, MPI_INT, MPI_STATUS_IGNORE), "Can't write to the output file");
-        TRY(MPI_File_write(file, &M, 1, MPI_INT, MPI_STATUS_IGNORE), "Can't write to the output file");
-        TRY(MPI_File_write(file, &tau, 1, MPI_DOUBLE, MPI_STATUS_IGNORE), "Can't write to the output file");
-        TRY(MPI_File_write(file, &h, 1, MPI_DOUBLE, MPI_STATUS_IGNORE), "Can't write to the output file");
-        TRY(MPI_File_write(file, &c, 1, MPI_DOUBLE, MPI_STATUS_IGNORE), "Can't write to the output file");
-        min_m = 0;
+        MPI_File file;
+        TRY(MPI_File_open(MPI_COMM_WORLD, OUTPUT_FILE, MPI_MODE_CREATE | MPI_MODE_WRONLY, 
+            MPI_INFO_NULL, &file), "Can't open file");
+        TRY(MPI_File_set_size(file, 0), "Can't clear file");
+
+        if(rank == 0)
+        {
+            TRY(MPI_File_write(file, &K, 1, MPI_INT, MPI_STATUS_IGNORE), "Can't write to the output file");
+            TRY(MPI_File_write(file, &M, 1, MPI_INT, MPI_STATUS_IGNORE), "Can't write to the output file");
+            TRY(MPI_File_write(file, &tau, 1, MPI_DOUBLE, MPI_STATUS_IGNORE), "Can't write to the output file");
+            TRY(MPI_File_write(file, &h, 1, MPI_DOUBLE, MPI_STATUS_IGNORE), "Can't write to the output file");
+            TRY(MPI_File_write(file, &c, 1, MPI_DOUBLE, MPI_STATUS_IGNORE), "Can't write to the output file");
+            min_m = 0;
+        }
+
+        int header_size = 2*sizeof(int) + 3*sizeof(double);
+        for(int k = 0; k <= K; k++)
+        {
+            int offset = header_size + (k*(M+1) + min_m) * sizeof(double);
+            TRY(MPI_File_write_at_all(file, offset, u[k].data() + min_m, max_m - min_m, MPI_DOUBLE, MPI_STATUS_IGNORE),
+                "Can't save solution to the output file");
+        }
     }
 
-    int header_size = 2*sizeof(int) + 3*sizeof(double);
-    for(int k = 0; k <= K; k++)
+    double total_time = MPI_Wtime() - start;
+    if(rank == 0)
     {
-        int offset = header_size + (k*(M+1) + min_m) * sizeof(double);
-        TRY(MPI_File_write_at(file, offset, u[k].data() + min_m, max_m - min_m, MPI_DOUBLE, MPI_STATUS_IGNORE),
-            "Can't save solution to the output file");
+        std::cout << "K = " << K << std::endl;
+        std::cout << "M = " << M << std::endl;
+        std::cout << "c = " << c << std::endl;
+        std::cout << "np = " << world_size << std::endl;
+        std::cout << "solving time: " << solving_time << " s" << std::endl;
+        std::cout << "writing time: " << (total_time - solving_time) << " s" << std::endl;
+        std::cout << "total   time: " << total_time << " s" << std::endl;
     }
 
     TRY(MPI_Finalize(), "Bad MPI finalization");
