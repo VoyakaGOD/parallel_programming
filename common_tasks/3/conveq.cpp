@@ -1,35 +1,7 @@
 #include <mpi_try.hpp>
+#include "config.hpp"
+#include <fstream>
 #include <vector>
-#include <cmath>
-
-#define SEP " "
-
-// configuration ///////////////////////////////////////
-
-const double T = 100; // 0 <= t <= T
-const double X = 100; // 0 <= x <= X
-const double tau = 0.025;
-const double h = 0.1;
-const double c = 1.35; // should be positive
-
-double phi(double x)
-{
-    return std::sin(x/5);
-}
-
-double psi(double t)
-{
-    return 2*std::sin(t);
-}
-
-double f(double t, double x)
-{
-    if((x < 40) || (x > 60))
-        return 0;
-    return 5*std::sin(x);
-}
-
-// configuration ///////////////////////////////////////
 
 typedef std::vector<std::vector<double>> Grid; //u[t][x]
 
@@ -65,7 +37,7 @@ int main(int argc, char** argv)
     }
 
     // first layer by corner scheme
-    for(int m = 0; m <= M; m++)
+    for(int m = 1; m <= M; m++)
         u[1][m] = solveByCornerScheme(u, 1, m);
 
     for(int k = 2; k <= K; k++)
@@ -75,14 +47,17 @@ int main(int argc, char** argv)
         u[k][M] = solveByCornerScheme(u, k, M);
     }
 
-    std::cout << K << SEP << M << SEP << tau << SEP << h << SEP << c << std::endl;
+    std::ofstream file(OUTPUT_FILE, std::ios::binary);
+    file.write(reinterpret_cast<const char *>(&K), sizeof(int));
+    file.write(reinterpret_cast<const char *>(&M), sizeof(int));
+    file.write(reinterpret_cast<const char *>(&tau), sizeof(double));
+    file.write(reinterpret_cast<const char *>(&h), sizeof(double));
+    file.write(reinterpret_cast<const char *>(&c), sizeof(double));
     for(int k = 0; k <= K; k++)
     {
-        std::cout << u[k][0];
-        for(int m = 1; m <= M; m++)
-            std::cout << " " << u[k][m];
-        std::cout << std::endl;
+        for(int m = 0; m <= M; m++)
+            file.write(reinterpret_cast<const char *>(&u[k][m]), sizeof(double));
     }
-    
+
     return 0;
 }
