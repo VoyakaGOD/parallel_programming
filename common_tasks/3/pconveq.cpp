@@ -101,12 +101,12 @@ int main(int argc, char** argv)
 
         if(rank > 0)
         {
-            TRY(MPI_Bsend(&u[k-1][min_m-1], 1, MPI_DOUBLE, rank-1, 0, MPI_COMM_WORLD),
+            TRY(MPI_Bsend(&u[k-1][min_m], 1, MPI_DOUBLE, rank-1, 0, MPI_COMM_WORLD),
                 "Can't send information to left process");
         }
         if(rank < last)
         {
-            TRY(MPI_Bsend(&u[k-1][max_m], 1, MPI_DOUBLE, rank+1, 0, MPI_COMM_WORLD),
+            TRY(MPI_Bsend(&u[k-1][max_m-1], 1, MPI_DOUBLE, rank+1, 0, MPI_COMM_WORLD),
                 "Can't send information to right process");
         }
     }
