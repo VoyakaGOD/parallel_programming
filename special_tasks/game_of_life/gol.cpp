@@ -7,7 +7,7 @@ int main(int argc, char** argv)
     int iterations_left = 1000;
 
     Grid grids[] = {Grid(width, height), Grid(width, height)};
-    ConsoleGridRenderer renderer;
+    ConsoleGridRenderer renderer(200);
     int grid_id = 0;
 
     patterns::place_block(grids[0], 5, 1);

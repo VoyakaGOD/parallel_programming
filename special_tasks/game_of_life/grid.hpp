@@ -27,13 +27,24 @@ public:
     void render(const GridRenderer &renderer) const;
 };
 
+class PipeGridRenderer : public GridRenderer
+{
+public:
+    void render(const std::vector<std::vector<bool>> &content, int width, int height) const;
+};
+
 class ConsoleGridRenderer : public GridRenderer
 {
 private:
-    float frame_rate;
+    int delay; // ms
+
+private:
+    void hideCursor() const;
+    void showCursor() const;
+    void clearScreen() const;
 
 public:
-    ConsoleGridRenderer();
+    ConsoleGridRenderer(int delay);
     void render(const std::vector<std::vector<bool>> &content, int width, int height) const;
 };
 

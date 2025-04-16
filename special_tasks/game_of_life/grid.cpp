@@ -39,12 +39,7 @@ void Grid::render(const GridRenderer &renderer) const
     renderer.render(content, width, height);
 }
 
-ConsoleGridRenderer::ConsoleGridRenderer()
-{
-
-}
-
-void ConsoleGridRenderer::render(const std::vector<std::vector<bool>> &content, int width, int height) const
+void PipeGridRenderer::render(const std::vector<std::vector<bool>> &content, int width, int height) const
 {
     for(int y = 0; y < height; y++)
     {
@@ -56,4 +51,39 @@ void ConsoleGridRenderer::render(const std::vector<std::vector<bool>> &content, 
         std::cout << std::endl;
     }
     std::cout << "\n\n";
+}
+
+ConsoleGridRenderer::ConsoleGridRenderer(int delay) : delay(delay) {}
+
+void ConsoleGridRenderer::hideCursor() const
+{
+    std::cout << "\x1B[?25l";
+}
+
+void ConsoleGridRenderer::showCursor() const
+{
+    std::cout << "\x1B[?25h";
+}
+
+void ConsoleGridRenderer::clearScreen() const
+{
+    std::cout << "\x1B[2J" << "\x1B[H";
+}
+
+void ConsoleGridRenderer::render(const std::vector<std::vector<bool>> &content, int width, int height) const
+{
+    clearScreen();
+
+    for(int y = 0; y < height; y++)
+    {
+        std::cout << ((y == height / 2) ? "@" : "|");
+        for(int x = 0; x < width; x++)
+        {
+            std::cout << (content[y][x] ? "#" : "_");
+        }
+        std::cout << "\n";
+    }
+
+    std::cout.flush();
+    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 }
