@@ -1,6 +1,6 @@
 BUILD_FOLDER = ../../executables
 SHARED_FOLDER = ../../shared
-TASKS = pthello ptsum
+TASKS = pthello ptsum ptmsg
 
 .PHONY: all clean
 
