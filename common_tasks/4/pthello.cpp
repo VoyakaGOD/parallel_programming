@@ -1,20 +1,11 @@
+#include <require.hpp>
 #include <pthread.h>
-#include <iostream>
 #include <sstream>
-
-void require(bool condition, const char *message)
-{
-    if(condition)
-        return;
-
-    std::cerr << message << std::endl;
-    exit(0);
-}
 
 void *sayHello(void *arg)
 {
     pthread_t id = pthread_self();
-    int rank = *(int*)arg;
+    int rank = *static_cast<int*>(arg);
 
     std::ostringstream output;
     output << "Hello world!, pthread_id: " << id << ", rank: " << rank << "\n";
