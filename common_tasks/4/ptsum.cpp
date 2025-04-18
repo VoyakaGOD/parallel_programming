@@ -1,6 +1,7 @@
 #include <require.hpp>
 #include <pthread.h>
 #include <chrono>
+#include <thread>
 
 struct Task
 {
@@ -72,6 +73,7 @@ int main(int argc, char** argv)
 
     std::cout << "Total sum(from 1 to 1/" << N << "): " << sum << std::endl;
     std::cout << "Threads: " << threads_count << ", time: " << elapsed.count() << " s" << std::endl;
+    std::cout << "Hardware concurrency: " << std::thread::hardware_concurrency() << std::endl;
     
     return 0;
 }
