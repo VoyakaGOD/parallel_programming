@@ -55,16 +55,6 @@ void PipeGridRenderer::render(const std::vector<std::vector<bool>> &content, int
 
 ConsoleGridRenderer::ConsoleGridRenderer(int delay) : delay(delay) {}
 
-void ConsoleGridRenderer::hideCursor() const
-{
-    std::cout << "\x1B[?25l";
-}
-
-void ConsoleGridRenderer::showCursor() const
-{
-    std::cout << "\x1B[?25h";
-}
-
 void ConsoleGridRenderer::clearScreen() const
 {
     std::cout << "\x1B[2J" << "\x1B[H";

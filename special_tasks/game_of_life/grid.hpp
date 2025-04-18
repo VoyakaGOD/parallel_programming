@@ -39,8 +39,6 @@ private:
     int delay; // ms
 
 private:
-    void hideCursor() const;
-    void showCursor() const;
     void clearScreen() const;
 
 public:
