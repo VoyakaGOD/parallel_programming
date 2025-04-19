@@ -47,23 +47,30 @@ pthread_mutex_t global_sum_mutex;
 Stack global_stack;
 double global_sum;
 
-void *handleGlobalStack(void *)
+pthread_mutex_t task_present_mutex;
+int active_handlers_count;
+
+void *handleGlobalStack(void *arg)
 {
     Stack local_stack;
+    int threads_count = *static_cast<int *>(arg);
 
     double s = 0;
     double A, B, fA, fB, sAB;
 
     while(true)
     {
+        pthread_mutex_lock(&task_present_mutex);
+
         pthread_mutex_lock(&global_stack_mutex);
-        if(IS_EMPTY(global_stack))
-        {
-            pthread_mutex_unlock(&global_stack_mutex);
-            break;
-        }
         POP(global_stack, A, B, fA, fB, sAB);
+        if(IS_NOT_EMPTY(global_stack))
+            pthread_mutex_unlock(&task_present_mutex);
+        if(A < B) // common segment
+            active_handlers_count++;
         pthread_mutex_unlock(&global_stack_mutex);
+        if(A > B) // terminal segment
+            break;
 
         while(true)
         {
@@ -101,9 +108,22 @@ void *handleGlobalStack(void *)
                     local_stack.data,
                     sizeof(IntegrationData) * LOCAL_STACK_CRITICAL_LINE);
                 global_stack.ptr += LOCAL_STACK_CRITICAL_LINE;
+                pthread_mutex_unlock(&task_present_mutex);
                 pthread_mutex_unlock(&global_stack_mutex);
             }
         }
+
+        pthread_mutex_lock(&global_stack_mutex);
+        active_handlers_count--;
+        if((active_handlers_count == 0) && IS_EMPTY(global_stack))
+        {
+            for(int i = 0; i < threads_count; i++)
+            {
+                PUSH(global_stack, 1, 0, 0, 0, 0); // push terminal segment
+            }
+            pthread_mutex_unlock(&task_present_mutex);
+        }
+        pthread_mutex_unlock(&global_stack_mutex);
     }
 
     pthread_mutex_lock(&global_sum_mutex);
@@ -128,10 +148,10 @@ int main(int argc, char** argv)
 
     for(int i = 1; i < threads_count; i++)
     {
-        int code = pthread_create(&threads[i], nullptr, handleGlobalStack, nullptr);
+        int code = pthread_create(&threads[i], nullptr, handleGlobalStack, &threads_count);
         require(code == 0, "Can't create thread");
     }
-    handleGlobalStack(nullptr);
+    handleGlobalStack(&threads_count);
 
     for(int i = 1; i < threads_count; i++)
     {

@@ -1,6 +1,7 @@
 #include "config.hpp"
 #include <iostream>
 #include <iomanip>
+#include <string>
 #include <chrono>
 #include <stack>
 
@@ -156,12 +157,16 @@ double integrateV3Stack(double A, double B)
     return I;
 }
 
-int main()
+int main(int argc, char** argv)
 {
     std::cout << std::setprecision(10);
 
     auto cp1 = std::chrono::high_resolution_clock::now();
-    double I1 = integrateV1(from, to);
+    double I1 = 0;
+    if((argc > 1) && (argv[1] == std::string("V1")))
+        I1 = integrateV1(from, to);
+    else
+        std::cout << "add flag <V1> to measure V1 algorithm" << std::endl;
     auto cp2 = std::chrono::high_resolution_clock::now();
     double I2 = integrateV2(from, to, f(from), f(to));
     auto cp3 = std::chrono::high_resolution_clock::now();
