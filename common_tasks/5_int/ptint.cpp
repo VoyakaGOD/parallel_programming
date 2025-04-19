@@ -10,7 +10,7 @@
 
 struct IntegrationData
 {
-    double A;
+    double A; 
     double B;
     double fA;
     double fB;
