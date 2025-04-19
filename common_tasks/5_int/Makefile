@@ -1,6 +1,6 @@
 BUILD_FOLDER = ../../executables
 SHARED_FOLDER = ../../shared
-TASKS = sint
+TASKS = sint ptint
 
 .PHONY: all clean
 

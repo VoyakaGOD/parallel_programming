@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <chrono>
+#include <stack>
 
 double integrateV1(double A, double B)
 {
@@ -111,6 +112,50 @@ double integrateV3(double A, double B)
     return I;
 }
 
+
+double integrateV3Stack(double A, double B)
+{
+    std::stack<IntegrationData> stack;
+
+    double I = 0;
+    double fA = f(A);
+    double fB = f(B);
+    double sAB = (fA + fB) * (B - A) / 2;
+
+    while(true)
+    {
+        double C = (A + B) / 2;
+        double fC = f(C);
+        double h = (C - A) / 2;
+
+        double sAC = (fA + fC) * h;
+        double sCB = (fC + fB) * h;
+        double sACB = sAC + sCB;
+
+        if(std::abs(sACB - sAB) > epsilon * std::abs(sACB))
+        {
+            stack.push({A, C, fA, fC, sAC});
+            A = C;
+            fA = fC;
+            sAB = sCB;
+        }
+        else
+        {
+            I += sACB;
+            if(stack.empty())
+                break;
+            A = stack.top().A;
+            B = stack.top().B;
+            fA = stack.top().fA;
+            fB = stack.top().fB;
+            sAB = stack.top().sAB;
+            stack.pop();
+        }
+    }
+
+    return I;
+}
+
 int main()
 {
     std::cout << std::setprecision(10);
@@ -122,11 +167,15 @@ int main()
     auto cp3 = std::chrono::high_resolution_clock::now();
     double I3 = integrateV3(from, to);
     auto cp4 = std::chrono::high_resolution_clock::now();
+    double I3s = integrateV3Stack(from, to);
+    auto cp5 = std::chrono::high_resolution_clock::now();
 
     std::chrono::duration<double> elapsed = cp2 - cp1;
-    std::cout << "V1: " << I1 << ", time: " << elapsed.count() << " s" << std::endl;
+    std::cout << "V1:  " << I1 << ", time: " << elapsed.count() << " s" << std::endl;
     elapsed = cp3 - cp2;
-    std::cout << "V2: " << I2 << ", time: " << elapsed.count() << " s" << std::endl;
+    std::cout << "V2:  " << I2 << ", time: " << elapsed.count() << " s" << std::endl;
     elapsed = cp4 - cp3;
-    std::cout << "V3: " << I3 << ", time: " << elapsed.count() << " s" << std::endl;
+    std::cout << "V3:  " << I3 << ", time: " << elapsed.count() << " s" << std::endl;
+    elapsed = cp5 - cp4;
+    std::cout << "V3s: " << I3s << ", time: " << elapsed.count() << " s" << std::endl;
 }
