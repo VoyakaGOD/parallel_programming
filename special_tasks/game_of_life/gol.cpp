@@ -14,10 +14,13 @@ int main(int argc, char** argv)
     GridRenderer *renderer = settings.renderer;
     int grid_id = 0;
 
-    if(addPatterns(grids[0], settings.initial_state_string, 0, 0))
+    if(addPatterns(grids[0], settings.initial_state_string))
         return -1;
 
+    Statistics statistics(settings.statistics_delay);
+
     grids[0].render(renderer); // show initial state
+    statistics.reportAboutNewGeneration();
 
     while(iterations_left > 0)
     {
@@ -28,6 +31,7 @@ int main(int argc, char** argv)
         }
         grid_id = 1 - grid_id; // flip
         grids[grid_id].render(renderer);
+        statistics.reportAboutNewGeneration();
 
         iterations_left--;
     }

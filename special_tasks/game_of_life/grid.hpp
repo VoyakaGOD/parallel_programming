@@ -4,27 +4,31 @@
 #include <vector>
 #include <iostream>
 #include <thread>
-#include <chrono>
+
+class Grid;
 
 class GridRenderer
 {
-protected:
-    int generation;
-
 public:
-    virtual void render(const std::vector<std::vector<bool>> &content, int width, int height) = 0;
+    virtual void render(const std::vector<std::vector<bool>> &content, const Grid &grid) = 0;
 };
 
 class Grid
 {
 private:
     std::vector<std::vector<bool>> content;
-    const int width;
-    const int height;
 
 public:
-    Grid(int width, int height);
-    void setStateClamped(int x, int y, bool state);
+    const int width;
+    const int height;
+    const int full_width;
+    const int full_height;
+    const int x_offset;
+    const int y_offset;
+
+public:
+    Grid(int width, int height, int full_width = 0, int full_height = 0, int x_offset = 0, int y_offset = 0);
+    void setStateToroidal(int x, int y, bool state);
     bool getNewState(int x, int y) const;
     bool getState(int x, int y) const;
     void setState(int x, int y, bool state);
@@ -34,10 +38,10 @@ public:
 class PipeGridRenderer : public GridRenderer
 {
 public:
-    void render(const std::vector<std::vector<bool>> &content, int width, int height);
+    void render(const std::vector<std::vector<bool>> &content, const Grid &grid);
 };
 
-class ConsoleGridRenderer : public GridRenderer
+class ConsoleGridRenderer : public PipeGridRenderer
 {
 private:
     int delay; // ms
@@ -47,19 +51,13 @@ private:
 
 public:
     ConsoleGridRenderer(int delay);
-    void render(const std::vector<std::vector<bool>> &content, int width, int height);
+    void render(const std::vector<std::vector<bool>> &content, const Grid &grid);
 };
 
 class BenchmarkGridRenderer : public GridRenderer
 {
-private:
-    decltype(std::chrono::high_resolution_clock::now()) initial_time;
-    bool is_initialized;
-    int delay; // shows statistics every <delay> generations
-
 public:
-    BenchmarkGridRenderer(int delay);
-    void render(const std::vector<std::vector<bool>> &content, int width, int height);
+    void render(const std::vector<std::vector<bool>> &content, const Grid &grid);
 };
 
 #endif //GRID

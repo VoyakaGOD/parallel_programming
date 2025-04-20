@@ -25,14 +25,20 @@ int main(int argc, char** argv)
     int height = (rank == last_rank) ? (settings.height - last_rank * common_slice_height) : common_slice_height;
     int iterations_left = settings.iterations_limit;
 
-    Grid grids[] = {Grid(width, height), Grid(width, height)};
+    Grid grids[] = {
+        Grid(width, height, width, settings.height, 0, rank * common_slice_height),
+        Grid(width, height, width, settings.height, 0, rank * common_slice_height)
+    };
     GridRenderer *renderer = settings.renderer;
     int grid_id = 0;
 
-    if(addPatterns(grids[0], settings.initial_state_string, 0, rank * common_slice_height))
+    if(addPatterns(grids[0], settings.initial_state_string))
         return -1;
 
+    Statistics statistics(settings.statistics_delay);
+
     MPI_SYNC(grids[0].render(renderer)); // show initial state
+    statistics.reportAboutNewGeneration();
 
     // boundary cells
     while(iterations_left > 0)
@@ -44,6 +50,7 @@ int main(int argc, char** argv)
         }
         grid_id = 1 - grid_id; // flip
         MPI_SYNC(grids[grid_id].render(renderer));
+        statistics.reportAboutNewGeneration();
 
         iterations_left--;
     }

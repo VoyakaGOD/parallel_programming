@@ -2,6 +2,23 @@
 
 #define REPORT(msg) do { std::cerr << msg << std::endl; return -1; } while(false)
 
+Statistics::Statistics(int delay) : delay(delay)
+{
+    initial_time = std::chrono::high_resolution_clock::now();
+}
+
+void Statistics::reportAboutNewGeneration()
+{
+    if((generation % delay) == 0)
+    {
+        std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - initial_time;
+        std::cout << "Gen: " << generation << ", time: " << elapsed.count() << "s       \r";
+        std::cout.flush();
+    }
+
+    generation++;
+}
+
 int readInt(const char *str, int &value)
 {
     char *end;
@@ -13,11 +30,12 @@ void showHelp(char *name)
 {
     std::cout << "GOL usage:\n";
     std::cout << name << " <width> <height> " << "[flags]\n";
-    std::cout << "    i<limit>  -- sets the limit of iterations\n";
-    std::cout << "    r<name>   -- sets the renderer\n";
-    std::cout << "        pipe           -- useful to save all generations to the file\n";
-    std::cout << "        cmd<delay>     -- displays generations with the specified delay using ansi sequences\n";
-    std::cout << "        measure<delay  -- shows statistics every <delay> generations\n";
+    std::cout << "    i<limit>                   -- sets the limit of iterations\n";
+    std::cout << "    r<name>                    -- sets the renderer\n";
+    std::cout << "        pipe        -- useful to save all generations to the file\n";
+    std::cout << "        cmd<delay>  -- displays generations with the specified delay using ansi sequences\n";
+    std::cout << "        no          -- don't shows grid\n";
+    std::cout << "    s<delay>                   -- sets statistics delay\n";
     std::cout << "    p<p1<x>.<y>,p2<x>.<y>,...> -- add pattern to initial state with origin (<x>, <y>)\n";
     std::cout << "        b  -- block\n";
     std::cout << "        h  -- beehive\n";
@@ -50,6 +68,7 @@ int initGOL(int argc, char** argv, CLISettings &settings)
         REPORT("Height should be positive value");
 
     settings.iterations_limit = DEFAULT_ITERATIONS_LIMIT;
+    settings.statistics_delay = DEFAULT_STATISTICS_DELAY;
 
     for(int i = 3; i < argc; i++)
     {
@@ -81,14 +100,9 @@ int initGOL(int argc, char** argv, CLISettings &settings)
                     REPORT("Delay should be positive value");
                 settings.renderer = new ConsoleGridRenderer(delay);
             }
-            else if(name.substr(0, 7) == "measure")
+            else if(name == "no")
             {
-                int delay;
-                if(readInt(flag + 8, delay))
-                    REPORT("Delay should be integer");
-                if(delay <= 0)
-                    REPORT("Delay should be positive value");
-                settings.renderer = new BenchmarkGridRenderer(delay);
+                settings.renderer = new BenchmarkGridRenderer();
             }
             else
             {
@@ -105,12 +119,12 @@ int initGOL(int argc, char** argv, CLISettings &settings)
     }
 
     if(settings.renderer == nullptr)
-        settings.renderer = new BenchmarkGridRenderer(1000);
+        settings.renderer = new BenchmarkGridRenderer();
 
     return 0;
 }
 
-static int handlePatternPosition(const char **command_ptr, bool &patterns_present, int &x, int &y, int offset_x, int offset_y)
+static int handlePatternPosition(const char **command_ptr, bool &patterns_present, int &x, int &y)
 {
     const char *command = *command_ptr;
     char *end;
@@ -123,13 +137,11 @@ static int handlePatternPosition(const char **command_ptr, bool &patterns_presen
         patterns_present = false;
     else if(*end != ',')
         return -1;
-    x -= offset_x;
-    y -= offset_y;
     *command_ptr = end + 1;
     return 0;
 }
 
-int addPatterns(Grid &grid, std::string patterns, int offset_x, int offset_y)
+int addPatterns(Grid &grid, std::string patterns)
 {
     if(patterns.length() == 0)
         return 0;
@@ -155,7 +167,7 @@ int addPatterns(Grid &grid, std::string patterns, int offset_x, int offset_y)
         if(it == map.end())
             REPORT("Unknown pattern");
 
-        if(handlePatternPosition(&command, patterns_present, x, y, offset_x, offset_y))
+        if(handlePatternPosition(&command, patterns_present, x, y))
             REPORT("Bad pattern [" << command << "]");
 
         it->second(grid, x, y);
