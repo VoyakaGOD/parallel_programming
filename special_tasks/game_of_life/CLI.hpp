@@ -27,7 +27,7 @@ struct CLISettings
     int width;
     int height;
     int iterations_limit;
-    GridRenderer* renderer;
+    GridRenderer* renderer = nullptr;
     std::string initial_state_string;
     int statistics_delay;
 };

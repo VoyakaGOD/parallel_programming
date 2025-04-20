@@ -2,7 +2,7 @@
 
 #define REPORT(msg) do { std::cerr << msg << std::endl; return -1; } while(false)
 
-Statistics::Statistics(int delay) : delay(delay)
+Statistics::Statistics(int delay) : delay(delay), generation(0)
 {
     initial_time = std::chrono::high_resolution_clock::now();
 }
