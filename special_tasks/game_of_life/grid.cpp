@@ -67,24 +67,34 @@ void Grid::render(GridRenderer *renderer) const
     renderer->render(content, *this);
 }
 
+std::ostream *GridRenderer::getOutput()
+{
+    return output;
+}
+    
+void GridRenderer::setOutput(std::ostream *new_output)
+{
+    output = new_output;
+}
+
 void PipeGridRenderer::render(const std::vector<std::vector<bool>> &content, const Grid &grid)
 {
     int center = grid.full_height / 2 - grid.y_offset;
     for(int y = 0; y < grid.height; y++)
     {
-        std::cout << ((y == center) ? "@" : "|");
+        *output << ((y == center) ? "@" : "|");
         for(int x = 0; x < grid.width; x++)
-            std::cout << (content[y][x] ? "#" : "_");
-        std::cout << '\n';
+            *output << (content[y][x] ? "#" : "_");
+        *output << '\n';
     }
-    std::cout.flush();
+    output->flush();
 }
 
 ConsoleGridRenderer::ConsoleGridRenderer(int delay) : delay(delay) {}
 
 void ConsoleGridRenderer::clearScreen() const
 {
-    std::cout << "\x1B[2J" << "\x1B[H";
+    *output << "\x1B[2J" << "\x1B[H";
 }
 
 void ConsoleGridRenderer::render(const std::vector<std::vector<bool>> &content, const Grid &grid)

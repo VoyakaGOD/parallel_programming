@@ -9,7 +9,13 @@ class Grid;
 
 class GridRenderer
 {
+protected:
+    std::ostream *output = &std::cout;
+
 public:
+    GridRenderer() = default;
+    std::ostream *getOutput();
+    void setOutput(std::ostream *new_output);
     virtual void render(const std::vector<std::vector<bool>> &content, const Grid &grid) = 0;
 };
 
