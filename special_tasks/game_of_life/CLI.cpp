@@ -131,6 +131,9 @@ static int handlePatternPosition(const char **command_ptr, bool &patterns_presen
 
 int addPatterns(Grid &grid, std::string patterns, int offset_x, int offset_y)
 {
+    if(patterns.length() == 0)
+        return 0;
+
     using pattern = void(*)(Grid&, int, int);
     static std::unordered_map<char, pattern> map = {
         {'b', patterns::place_block },

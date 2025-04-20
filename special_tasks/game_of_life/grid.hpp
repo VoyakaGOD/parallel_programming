@@ -24,6 +24,7 @@ private:
 
 public:
     Grid(int width, int height);
+    void setStateClamped(int x, int y, bool state);
     bool getNewState(int x, int y) const;
     bool getState(int x, int y) const;
     void setState(int x, int y, bool state);

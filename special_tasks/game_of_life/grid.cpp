@@ -7,6 +7,14 @@ Grid::Grid(int width, int height) : width(width), height(height)
         content[line].resize(width);
 }
 
+void Grid::setStateClamped(int x, int y, bool state)
+{
+    if((x < 0) || (y < 0) || (x >= width) || (y >= height))
+        return;
+
+    content[y][x] = state;
+}
+
 bool Grid::getNewState(int x, int y) const
 {
     int neighbours = getState(x - 1, y + 1);
