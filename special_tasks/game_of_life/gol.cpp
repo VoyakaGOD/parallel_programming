@@ -1,7 +1,14 @@
 #include "patterns_lib.hpp"
+#include "CLI.hpp"
 
 int main(int argc, char** argv)
 {
+    if(argc < 3)
+    {
+        show_help(argv[0]);
+        return 0;
+    }
+
     int width = 100;
     int height = 25;
     int iterations_left = 1000;

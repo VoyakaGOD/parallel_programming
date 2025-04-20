@@ -1,7 +1,7 @@
 BUILD_FOLDER = ../../executables
 SHARED_FOLDER = ../../shared
-SRC = grid.cpp
-HEADERS = grid.hpp patterns_lib.hpp
+SRC = grid.cpp CLI.cpp
+HEADERS = grid.hpp patterns_lib.hpp CLI.hpp
 TASKS = gol
 
 .PHONY: all clean
