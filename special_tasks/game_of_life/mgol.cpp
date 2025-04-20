@@ -37,8 +37,13 @@ int main(int argc, char** argv)
 
     Statistics statistics(settings.statistics_delay);
 
-    MPI_SYNC(grids[0].render(renderer)); // show initial state
-    statistics.reportAboutNewGeneration();
+    if(renderer)
+    {
+        MPI_SYNC(grids[0].render(renderer)); // show initial state
+        BARRIER;
+    }
+    if(rank == 0)
+        statistics.reportAboutNewGeneration(renderer != nullptr);
 
     // boundary cells
     while(iterations_left > 0)
@@ -49,8 +54,13 @@ int main(int argc, char** argv)
                 grids[1 - grid_id].setState(i, j, grids[grid_id].getNewState(i, j));
         }
         grid_id = 1 - grid_id; // flip
-        MPI_SYNC(grids[grid_id].render(renderer));
-        statistics.reportAboutNewGeneration();
+        if(renderer)
+        {
+            MPI_SYNC(grids[grid_id].render(renderer));
+            BARRIER;
+        }
+        if(rank == 0)
+            statistics.reportAboutNewGeneration(renderer != nullptr);
 
         iterations_left--;
     }

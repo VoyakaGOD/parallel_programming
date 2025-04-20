@@ -7,14 +7,18 @@ Statistics::Statistics(int delay) : delay(delay)
     initial_time = std::chrono::high_resolution_clock::now();
 }
 
-void Statistics::reportAboutNewGeneration()
+void Statistics::reportAboutNewGeneration(bool new_line)
 {
     if((generation % delay) == 0)
     {
         std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - initial_time;
-        std::cout << "Gen: " << generation << ", time: " << elapsed.count() << "s       \r";
-        std::cout.flush();
+        std::cout << "\rGen: " << generation << ", time: " << elapsed.count() << " s       ";
+        if(!new_line)
+            std::cout.flush();
     }
+
+    if(new_line)
+        std::cout << std::endl;
 
     generation++;
 }
@@ -95,14 +99,14 @@ int initGOL(int argc, char** argv, CLISettings &settings)
             {
                 int delay;
                 if(readInt(flag + 4, delay))
-                    REPORT("Delay should be integer");
+                    REPORT("Renderer delay should be integer");
                 if(delay <= 0)
-                    REPORT("Delay should be positive value");
+                    REPORT("Renderer delay should be positive value");
                 settings.renderer = new ConsoleGridRenderer(delay);
             }
             else if(name == "no")
             {
-                settings.renderer = new BenchmarkGridRenderer();
+                settings.renderer = nullptr;
             }
             else
             {
@@ -112,14 +116,19 @@ int initGOL(int argc, char** argv, CLISettings &settings)
         case 'p':
             settings.initial_state_string = std::string(flag + 1);
             break;
+        case 's':
+        int delay;
+            if(readInt(flag + 1, delay))
+                REPORT("Statistics delay should be integer");
+            if(delay <= 0)
+                REPORT("Statistics delay should be positive value");
+            settings.statistics_delay = delay;
+            break;
         default:
             REPORT("Unknown flag");
             break;
         }
     }
-
-    if(settings.renderer == nullptr)
-        settings.renderer = new BenchmarkGridRenderer();
 
     return 0;
 }

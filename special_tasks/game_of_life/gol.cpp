@@ -19,8 +19,9 @@ int main(int argc, char** argv)
 
     Statistics statistics(settings.statistics_delay);
 
-    grids[0].render(renderer); // show initial state
-    statistics.reportAboutNewGeneration();
+    if(renderer)
+        grids[0].render(renderer); // show initial state
+    statistics.reportAboutNewGeneration(renderer != nullptr);
 
     while(iterations_left > 0)
     {
@@ -30,8 +31,9 @@ int main(int argc, char** argv)
                 grids[1 - grid_id].setState(i, j, grids[grid_id].getNewState(i, j));
         }
         grid_id = 1 - grid_id; // flip
-        grids[grid_id].render(renderer);
-        statistics.reportAboutNewGeneration();
+        if(renderer)
+            grids[grid_id].render(renderer);
+        statistics.reportAboutNewGeneration(renderer != nullptr);
 
         iterations_left--;
     }

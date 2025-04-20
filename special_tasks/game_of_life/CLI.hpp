@@ -19,7 +19,7 @@ private:
 
 public:
     Statistics(int delay);
-    void reportAboutNewGeneration();
+    void reportAboutNewGeneration(bool new_line);
 };
 
 struct CLISettings

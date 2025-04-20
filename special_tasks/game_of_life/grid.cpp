@@ -90,11 +90,10 @@ void ConsoleGridRenderer::clearScreen() const
 void ConsoleGridRenderer::render(const std::vector<std::vector<bool>> &content, const Grid &grid)
 {
     if(grid.y_offset == 0) // first renderer in chain
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(delay));
         clearScreen();
+    }
 
     PipeGridRenderer::render(content, grid);
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 }
-
-void BenchmarkGridRenderer::render(const std::vector<std::vector<bool>> &content, const Grid &grid) {}

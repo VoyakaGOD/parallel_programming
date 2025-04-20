@@ -54,10 +54,4 @@ public:
     void render(const std::vector<std::vector<bool>> &content, const Grid &grid);
 };
 
-class BenchmarkGridRenderer : public GridRenderer
-{
-public:
-    void render(const std::vector<std::vector<bool>> &content, const Grid &grid);
-};
-
 #endif //GRID
