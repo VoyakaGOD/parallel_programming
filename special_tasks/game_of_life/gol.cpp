@@ -1,4 +1,3 @@
-#include "patterns_lib.hpp"
 #include "CLI.hpp"
 
 int main(int argc, char** argv)
@@ -15,19 +14,12 @@ int main(int argc, char** argv)
     GridRenderer *renderer = settings.renderer;
     int grid_id = 0;
 
-    patterns::place_block(grids[0], 5, 1);
-    patterns::place_beehive(grids[0], 25, 1);
-    patterns::place_loaf(grids[0], 45, 1);
-
-    patterns::place_blinker(grids[0], 5, 7);
-    patterns::place_toad(grids[0], 25, 7);
-    patterns::place_beacon(grids[0], 45, 7);
-
-    patterns::place_LWSS(grids[0], 10, 15);
+    if(addPatterns(grids[0], settings.initial_state_string, 0, 0))
+        return -1;
 
     grids[0].render(renderer); // show initial state
 
-    while(true)
+    while(iterations_left > 0)
     {
         for(int j = 0; j < height; j++)
         {
@@ -37,11 +29,6 @@ int main(int argc, char** argv)
         grid_id = 1 - grid_id; // flip
         grids[grid_id].render(renderer);
 
-        if(iterations_left > 0)
-        {
-            iterations_left--;
-            if(iterations_left == 0)
-                break;
-        }
+        iterations_left--;
     }
 }

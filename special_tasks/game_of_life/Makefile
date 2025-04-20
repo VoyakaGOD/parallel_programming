@@ -1,6 +1,6 @@
 BUILD_FOLDER = ../../executables
 SHARED_FOLDER = ../../shared
-SRC = grid.cpp CLI.cpp
+SRC = grid.cpp CLI.cpp patterns_lib.cpp
 HEADERS = grid.hpp patterns_lib.hpp CLI.hpp
 TASKS = gol
 

@@ -18,7 +18,15 @@ void showHelp(char *name)
     std::cout << "        pipe           -- useful to save all generations to the file\n";
     std::cout << "        cmd<delay>     -- displays generations with the specified delay using ansi sequences\n";
     std::cout << "        measure<delay  -- shows statistics every <delay> generations\n";
-    std::cout << "    p<...> -- change initial state with ...\n";
+    std::cout << "    p<p1<x>.<y>,p2<x>.<y>,...> -- add pattern to initial state with origin (<x>, <y>)\n";
+    std::cout << "        b  -- block\n";
+    std::cout << "        h  -- beehive\n";
+    std::cout << "        l  -- loaf\n";
+    std::cout << "        i  -- blinker\n";
+    std::cout << "        t  -- toad\n";
+    std::cout << "        c  -- beacon\n";
+    std::cout << "        g  -- glider\n";
+    std::cout << "        s  -- light-weight spaceship\n";
 }
 
 int initGOL(int argc, char** argv, CLISettings &settings)
@@ -98,6 +106,57 @@ int initGOL(int argc, char** argv, CLISettings &settings)
 
     if(settings.renderer == nullptr)
         settings.renderer = new BenchmarkGridRenderer(1000);
+
+    return 0;
+}
+
+static int handlePatternPosition(const char **command_ptr, bool &patterns_present, int &x, int &y, int offset_x, int offset_y)
+{
+    const char *command = *command_ptr;
+    char *end;
+    x = std::strtol(command + 1, &end, 10);
+    if(*end != '.')
+        return -1;
+    command = end;
+    y = std::strtol(command + 1, &end, 10);
+    if(*end == '\0')
+        patterns_present = false;
+    else if(*end != ',')
+        return -1;
+    x -= offset_x;
+    y -= offset_y;
+    *command_ptr = end + 1;
+    return 0;
+}
+
+int addPatterns(Grid &grid, std::string patterns, int offset_x, int offset_y)
+{
+    using pattern = void(*)(Grid&, int, int);
+    static std::unordered_map<char, pattern> map = {
+        {'b', patterns::place_block },
+        {'h', patterns::place_beehive },
+        {'l', patterns::place_loaf },
+        {'i', patterns::place_blinker },
+        {'t', patterns::place_toad },
+        {'c', patterns::place_beacon },
+        {'g', patterns::place_glider },
+        {'s', patterns::place_LWSS }
+    };
+
+    const char *command = patterns.c_str();
+    bool patterns_present = true;
+    int x, y;
+    while(patterns_present)
+    {
+        auto it = map.find(command[0]);
+        if(it == map.end())
+            REPORT("Unknown pattern");
+
+        if(handlePatternPosition(&command, patterns_present, x, y, offset_x, offset_y))
+            REPORT("Bad pattern [" << command << "]");
+
+        it->second(grid, x, y);
+    }
 
     return 0;
 }
