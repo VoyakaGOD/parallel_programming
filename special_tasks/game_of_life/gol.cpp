@@ -3,18 +3,16 @@
 
 int main(int argc, char** argv)
 {
-    if(argc < 3)
-    {
-        show_help(argv[0]);
-        return 0;
-    }
+    CLISettings settings;
+    if(initGOL(argc, argv, settings))
+        return -1;
 
-    int width = 100;
-    int height = 25;
-    int iterations_left = 1000;
+    int width = settings.width;
+    int height = settings.height;
+    int iterations_left = settings.iterations_limit;
 
     Grid grids[] = {Grid(width, height), Grid(width, height)};
-    ConsoleGridRenderer renderer(200);
+    GridRenderer *renderer = settings.renderer;
     int grid_id = 0;
 
     patterns::place_block(grids[0], 5, 1);

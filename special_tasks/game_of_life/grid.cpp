@@ -34,12 +34,12 @@ void Grid::setState(int x, int y, bool state)
     content[(height + y) % height][(width + x) % width] = state;
 }
 
-void Grid::render(const GridRenderer &renderer) const
+void Grid::render(GridRenderer *renderer) const
 {
-    renderer.render(content, width, height);
+    renderer->render(content, width, height);
 }
 
-void PipeGridRenderer::render(const std::vector<std::vector<bool>> &content, int width, int height) const
+void PipeGridRenderer::render(const std::vector<std::vector<bool>> &content, int width, int height)
 {
     for(int y = 0; y < height; y++)
     {
@@ -48,9 +48,11 @@ void PipeGridRenderer::render(const std::vector<std::vector<bool>> &content, int
         {
             std::cout << (content[y][x] ? "#" : "_");
         }
-        std::cout << std::endl;
+        std::cout << '\n';
     }
+    std::cout << "Gen: " << generation;
     std::cout << "\n\n";
+    generation++;
 }
 
 ConsoleGridRenderer::ConsoleGridRenderer(int delay) : delay(delay) {}
@@ -60,7 +62,7 @@ void ConsoleGridRenderer::clearScreen() const
     std::cout << "\x1B[2J" << "\x1B[H";
 }
 
-void ConsoleGridRenderer::render(const std::vector<std::vector<bool>> &content, int width, int height) const
+void ConsoleGridRenderer::render(const std::vector<std::vector<bool>> &content, int width, int height)
 {
     clearScreen();
 
@@ -74,6 +76,28 @@ void ConsoleGridRenderer::render(const std::vector<std::vector<bool>> &content, 
         std::cout << "\n";
     }
 
+    std::cout << "Gen: " << generation;
     std::cout.flush();
     std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+    generation++;
+}
+
+BenchmarkGridRenderer::BenchmarkGridRenderer(int delay) : delay(delay) {}
+
+void BenchmarkGridRenderer::render(const std::vector<std::vector<bool>> &content, int width, int height)
+{
+    if(!is_initialized)
+    {
+        is_initialized = true;
+        initial_time = std::chrono::high_resolution_clock::now();
+    }
+
+    if((generation % delay) == 0)
+    {
+        std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - initial_time;
+        std::cout << "Gen: " << generation << ", time: " << elapsed.count() << "s       \r";
+        std::cout.flush();
+    }
+
+    generation++;
 }

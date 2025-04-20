@@ -8,8 +8,11 @@
 
 class GridRenderer
 {
+protected:
+    int generation;
+
 public:
-    virtual void render(const std::vector<std::vector<bool>> &content, int width, int height) const = 0;
+    virtual void render(const std::vector<std::vector<bool>> &content, int width, int height) = 0;
 };
 
 class Grid
@@ -24,13 +27,13 @@ public:
     bool getNewState(int x, int y) const;
     bool getState(int x, int y) const;
     void setState(int x, int y, bool state);
-    void render(const GridRenderer &renderer) const;
+    void render(GridRenderer *renderer) const;
 };
 
 class PipeGridRenderer : public GridRenderer
 {
 public:
-    void render(const std::vector<std::vector<bool>> &content, int width, int height) const;
+    void render(const std::vector<std::vector<bool>> &content, int width, int height);
 };
 
 class ConsoleGridRenderer : public GridRenderer
@@ -43,7 +46,19 @@ private:
 
 public:
     ConsoleGridRenderer(int delay);
-    void render(const std::vector<std::vector<bool>> &content, int width, int height) const;
+    void render(const std::vector<std::vector<bool>> &content, int width, int height);
+};
+
+class BenchmarkGridRenderer : public GridRenderer
+{
+private:
+    decltype(std::chrono::high_resolution_clock::now()) initial_time;
+    bool is_initialized;
+    int delay; // shows statistics every <delay> generations
+
+public:
+    BenchmarkGridRenderer(int delay);
+    void render(const std::vector<std::vector<bool>> &content, int width, int height);
 };
 
 #endif //GRID
