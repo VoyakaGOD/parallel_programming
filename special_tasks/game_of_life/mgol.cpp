@@ -55,7 +55,18 @@ void exchange(int rank, int world_size, const Grid &grid,
     int next = (rank + 1) % world_size;
     int prev = (world_size + rank - 1) % world_size;
 
-    if(rank % 2 == 0)
+    if((world_size % 2 == 1) && (rank == (world_size - 1)))
+    {
+        TRY(MPI_Recv(upper_line->data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
+            "Can't receive boundary line");
+        TRY(MPI_Send(grid.getUpperLine().data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD), 
+            "Can't send boundary line");
+        TRY(MPI_Send(grid.getBottomLine().data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD), 
+            "Can't send boundary line");
+        TRY(MPI_Recv(bottom_line->data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
+            "Can't receive boundary line");
+    }
+    else if(rank % 2 == 0)
     {
         TRY(MPI_Recv(bottom_line->data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
             "Can't receive boundary line");

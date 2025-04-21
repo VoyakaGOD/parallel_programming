@@ -43,9 +43,9 @@ cell_t Grid::getNewState(int x, int y,
 
     if(upper_line && (y == 0))
     {
-        neighbours += (*upper_line)[x - 1];
+        neighbours += (*upper_line)[(width + x - 1) % width];
         neighbours += (*upper_line)[x];
-        neighbours += (*upper_line)[x + 1];
+        neighbours += (*upper_line)[(x + 1) % width];
     }
     else
     {
@@ -59,9 +59,9 @@ cell_t Grid::getNewState(int x, int y,
 
     if(bottom_line && (y == (height - 1)))
     {
-        neighbours += (*bottom_line)[x - 1];
+        neighbours += (*bottom_line)[(width + x - 1) % width];
         neighbours += (*bottom_line)[x];
-        neighbours += (*bottom_line)[x + 1];
+        neighbours += (*bottom_line)[(x + 1) % width];
     }
     else
     {
