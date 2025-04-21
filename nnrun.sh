@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# ./run.sh [name] [MPI number of processes] [SLURM number of processes] [args...]
+# ./nnrun.sh [name] [MPI number of processes] [SLURM number of processes] [args...]
 
 name="$1"
 initial_np="$2"
