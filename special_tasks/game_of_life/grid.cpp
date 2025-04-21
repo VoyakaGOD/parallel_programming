@@ -13,7 +13,7 @@ Grid::Grid(int width, int height, int full_width, int full_height, int x_offset,
         content[line].resize(width);
 }
 
-void Grid::setStateToroidal(int x, int y, bool state)
+void Grid::setStateToroidal(int x, int y, cell_t state)
 {
     x = (x % full_width + full_width) % full_width;
     y = (y % full_height + full_height) % full_height;
@@ -35,16 +35,40 @@ void Grid::setStateToroidal(int x, int y, bool state)
     content[y][x] = state;
 }
 
-bool Grid::getNewState(int x, int y) const
+cell_t Grid::getNewState(int x, int y,
+    const std::vector<uint8_t> *upper_line,
+    const std::vector<uint8_t> *bottom_line) const
 {
-    int neighbours = getState(x - 1, y + 1);
-    neighbours += getState(x - 1, y);
-    neighbours += getState(x - 1, y - 1);
-    neighbours += getState(x, y + 1);
-    neighbours += getState(x, y - 1);
-    neighbours += getState(x + 1, y + 1);
-    neighbours += getState(x + 1, y);
-    neighbours += getState(x + 1, y - 1);
+    int neighbours = 0;
+
+    if(upper_line && (y == 0))
+    {
+        neighbours += (*upper_line)[x - 1];
+        neighbours += (*upper_line)[x];
+        neighbours += (*upper_line)[x + 1];
+    }
+    else
+    {
+        neighbours += getStateSafe(x - 1, y - 1);
+        neighbours += getStateSafe(x, y - 1);
+        neighbours += getStateSafe(x + 1, y - 1);
+    }
+
+    neighbours += getStateSafe(x - 1, y);
+    neighbours += getStateSafe(x + 1, y);
+
+    if(bottom_line && (y == (height - 1)))
+    {
+        neighbours += (*bottom_line)[x - 1];
+        neighbours += (*bottom_line)[x];
+        neighbours += (*bottom_line)[x + 1];
+    }
+    else
+    {
+        neighbours += getStateSafe(x - 1, y + 1);
+        neighbours += getStateSafe(x, y + 1);
+        neighbours += getStateSafe(x + 1, y + 1);
+    }
 
     if(neighbours == 3)
         return true;
@@ -52,19 +76,29 @@ bool Grid::getNewState(int x, int y) const
     return content[y][x] && (neighbours == 2);
 }
 
-bool Grid::getState(int x, int y) const
+cell_t Grid::getStateSafe(int x, int y) const
 {
     return content[(height + y) % height][(width + x) % width];
 }
 
-void Grid::setState(int x, int y, bool state)
+void Grid::setState(int x, int y, cell_t state)
 {
-    content[(height + y) % height][(width + x) % width] = state;
+    content[y][x] = state;
 }
 
 void Grid::render(GridRenderer *renderer) const
 {
     renderer->render(content, *this);
+}
+
+const std::vector<cell_t> &Grid::getUpperLine() const
+{
+    return content[0];
+}
+
+const std::vector<cell_t> &Grid::getBottomLine() const
+{
+    return content[height - 1];
 }
 
 std::ostream *GridRenderer::getOutput()
@@ -77,7 +111,7 @@ void GridRenderer::setOutput(std::ostream *new_output)
     output = new_output;
 }
 
-void PipeGridRenderer::render(const std::vector<std::vector<bool>> &content, const Grid &grid)
+void PipeGridRenderer::render(const std::vector<std::vector<cell_t>> &content, const Grid &grid)
 {
     int center = grid.full_height / 2 - grid.y_offset;
     for(int y = 0; y < grid.height; y++)
@@ -97,7 +131,7 @@ void ConsoleGridRenderer::clearScreen() const
     *output << "\x1B[2J" << "\x1B[H";
 }
 
-void ConsoleGridRenderer::render(const std::vector<std::vector<bool>> &content, const Grid &grid)
+void ConsoleGridRenderer::render(const std::vector<std::vector<cell_t>> &content, const Grid &grid)
 {
     if(grid.y_offset == 0) // first renderer in chain
     {

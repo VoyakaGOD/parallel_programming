@@ -37,4 +37,7 @@ int main(int argc, char** argv)
 
         iterations_left--;
     }
+
+    if((renderer == nullptr) && (settings.iterations_limit % settings.statistics_delay == 0))
+        std::cout << std::endl;
 }

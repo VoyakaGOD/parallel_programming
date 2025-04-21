@@ -1,4 +1,3 @@
-// todo: fix troubles with setState/getState/[]
 // todo: add send/recv opt flag O
 // todo: extra help info about O and anisotropy
 
@@ -45,6 +44,41 @@ void render(int rank, int world_size, const Grid &grid, GridRenderer *renderer, 
     }
 }
 
+void exchange(int rank, int world_size, const Grid &grid,
+    std::vector<cell_t> *upper_line,
+    std::vector<cell_t> *bottom_line)
+{
+    if(world_size == 1)
+        return;
+
+    int width = grid.width;
+    int next = (rank + 1) % world_size;
+    int prev = (world_size + rank - 1) % world_size;
+
+    if(rank % 2 == 0)
+    {
+        TRY(MPI_Recv(bottom_line->data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
+            "Can't receive boundary line");
+        TRY(MPI_Send(grid.getBottomLine().data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD), 
+            "Can't send boundary line");
+        TRY(MPI_Recv(upper_line->data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
+            "Can't receive boundary line");
+        TRY(MPI_Send(grid.getUpperLine().data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD), 
+            "Can't send boundary line");
+    }
+    else
+    {
+        TRY(MPI_Send(grid.getUpperLine().data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD), 
+            "Can't send boundary line");
+        TRY(MPI_Recv(upper_line->data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
+            "Can't receive boundary line");
+        TRY(MPI_Send(grid.getBottomLine().data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD), 
+            "Can't send boundary line");
+        TRY(MPI_Recv(bottom_line->data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
+            "Can't receive boundary line");
+    }
+}
+
 int main(int argc, char** argv)
 {
     TRY(MPI_Init(&argc, &argv), "Bad MPI initialization");
@@ -65,6 +99,16 @@ int main(int argc, char** argv)
     int height = (rank == last_rank) ? (settings.height - last_rank * common_slice_height) : common_slice_height;
     int iterations_left = settings.iterations_limit;
 
+    std::vector<cell_t> *upper_line;
+    std::vector<cell_t> *bottom_line;
+    if(world_size > 1)
+    {
+        upper_line = new std::vector<cell_t>();
+        upper_line->resize(width);
+        bottom_line = new std::vector<cell_t>();
+        bottom_line->resize(width);
+    }
+
     Grid grids[] = {
         Grid(width, height, width, settings.height, 0, rank * common_slice_height),
         Grid(width, height, width, settings.height, 0, rank * common_slice_height)
@@ -81,19 +125,23 @@ int main(int argc, char** argv)
 
     render(rank, world_size, grids[0], renderer, statistics); // show initial state
 
-    // todo: boundary cells
     while(iterations_left > 0)
     {
+        exchange(rank, world_size, grids[grid_id], upper_line, bottom_line);
+
         for(int j = 0; j < height; j++)
         {
             for(int i = 0; i < width; i++)
-                grids[1 - grid_id].setState(i, j, grids[grid_id].getNewState(i, j));
+                grids[1 - grid_id].setState(i, j, grids[grid_id].getNewState(i, j, upper_line, bottom_line));
         }
+
         grid_id = 1 - grid_id; // flip
         render(rank, world_size, grids[grid_id], renderer, statistics);
-
         iterations_left--;
     }
+
+    if((rank == 0) && (renderer == nullptr) && (settings.iterations_limit % settings.statistics_delay == 0))
+        std::cout << std::endl;
 
     TRY(MPI_Finalize(), "Bad MPI finalization");
         return 0;
