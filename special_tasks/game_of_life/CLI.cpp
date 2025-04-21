@@ -51,11 +51,14 @@ void showHelp(char *name)
     std::cout << "        s  -- light-weight spaceship\n";
 }
 
-int initGOL(int argc, char** argv, CLISettings &settings)
+int initGOL(int argc, char** argv, CLISettings &settings, void (*custom_help)(char *name))
 {
     if(argc < 3)
     {
-        showHelp(argv[0]);
+        if(custom_help)
+            custom_help(argv[0]);
+        else
+            showHelp(argv[0]);
         return -1;
     }
 
@@ -123,6 +126,11 @@ int initGOL(int argc, char** argv, CLISettings &settings)
             if(delay <= 0)
                 REPORT("Statistics delay should be positive value");
             settings.statistics_delay = delay;
+            break;
+        case 'O':
+            if(std::strlen(flag) > 1)
+                REPORT("O flag has no suffix");
+            settings.opt = true;
             break;
         default:
             REPORT("Unknown flag");

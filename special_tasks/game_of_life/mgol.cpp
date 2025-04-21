@@ -1,9 +1,14 @@
-// todo: add send/recv opt flag O
-// todo: extra help info about O and anisotropy
-
 #include <mpi_try.hpp>
 #include <sstream>
 #include "CLI.hpp"
+
+void showExtendedHelp(char *name)
+{
+    showHelp(name);
+    std::cout << "    O                          -- enables MPI send/recv optimization" << std::endl;
+    std::cout << "WARNING: anisotropy, the grid is cut into horizontal stripes and therefore "
+    "the greatest speedup is achieved with a high height and low width of playing field!" << std::endl;
+}
 
 void render(int rank, int world_size, const Grid &grid, GridRenderer *renderer, Statistics &statistics)
 {
@@ -101,7 +106,7 @@ int main(int argc, char** argv)
     TRY(MPI_Comm_size(MPI_COMM_WORLD, &world_size), "Can't get total count of processes");
 
     CLISettings settings;
-    if(initGOL(argc, argv, settings))
+    if(initGOL(argc, argv, settings, showExtendedHelp))
         return -1;
 
     int last_rank = world_size - 1;

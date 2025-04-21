@@ -3,6 +3,7 @@
 
 #include "patterns_lib.hpp"
 #include <unordered_map>
+#include <cstring>
 #include <limits>
 #include <string>
 #include <chrono>
@@ -30,11 +31,12 @@ struct CLISettings
     GridRenderer* renderer = nullptr;
     std::string initial_state_string;
     int statistics_delay;
+    bool opt = false;
 };
 
 int readInt(const char *str, int &value);
 void showHelp(char *name);
-int initGOL(int argc, char** argv, CLISettings &settings);
+int initGOL(int argc, char** argv, CLISettings &settings, void (*custom_help)(char *name) = nullptr);
 int addPatterns(Grid &grid, std::string patterns);
 
 #endif //GOL_CLI
