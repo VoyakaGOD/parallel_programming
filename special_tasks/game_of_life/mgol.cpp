@@ -49,10 +49,64 @@ void render(int rank, int world_size, const Grid &grid, GridRenderer *renderer, 
     }
 }
 
-void exchange(int rank, int world_size, const Grid &grid,
+void sendLine(int to, const std::vector<cell_t> *line, int &delay, grid_dist_func_t getDistance, 
+    const Grid &grid, bool opt)
+{
+    if(!opt)
+    {
+        TRY(MPI_Send(line->data(), line->size(), MPI_UINT8_T, to, 0, MPI_COMM_WORLD),
+            "Can't send boundary line");
+        return;
+    }
+
+    delay--;
+    if(delay > 0)
+        return;
+
+    delay = (grid.*getDistance)();
+
+    TRY(MPI_Send(&delay, 1, MPI_INT, to, 0, MPI_COMM_WORLD), "Can't send BBMsg");
+    if(delay == 0)
+    {
+        TRY(MPI_Send(line->data(), line->size(), MPI_UINT8_T, to, 0, MPI_COMM_WORLD),
+            "Can't send boundary line");
+    }
+}
+
+void recvLine(int from, std::vector<cell_t> *line, int &delay, bool opt)
+{
+    if(!opt)
+    {
+        TRY(MPI_Recv(line->data(), line->size(), MPI_UINT8_T, from, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
+            "Can't receive boundary line");
+        return;
+    }
+
+    delay--;
+    if(delay > 0)
+        return;
+
+    TRY(MPI_Recv(&delay, 1, MPI_INT, from, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE), "Can't send BBMsg");
+    if(delay == 0)
+    {
+        TRY(MPI_Recv(line->data(), line->size(), MPI_UINT8_T, from, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
+            "Can't receive boundary line");
+    }
+    else
+    {
+        std::fill(line->begin(), line->end(), false);
+    }
+}
+
+void exchange(int rank, int world_size, const Grid &grid, bool opt,
     std::vector<cell_t> *upper_line,
     std::vector<cell_t> *bottom_line)
 {
+    static int upper_send_delay = 0;
+    static int upper_recv_delay = 0;
+    static int bottom_send_delay = 0;
+    static int bottom_recv_delay = 0;
+
     if(world_size == 1)
         return;
 
@@ -62,36 +116,36 @@ void exchange(int rank, int world_size, const Grid &grid,
 
     if((world_size % 2 == 1) && (rank == (world_size - 1)))
     {
-        TRY(MPI_Recv(upper_line->data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
-            "Can't receive boundary line");
-        TRY(MPI_Send(grid.getUpperLine().data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD), 
-            "Can't send boundary line");
-        TRY(MPI_Send(grid.getBottomLine().data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD), 
-            "Can't send boundary line");
-        TRY(MPI_Recv(bottom_line->data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
-            "Can't receive boundary line");
+        recvLine(prev, upper_line, upper_recv_delay, opt);
+        sendLine(prev, &grid.getUpperLine(), upper_send_delay, &Grid::getUpperDistance, grid, opt);
+        sendLine(next, &grid.getBottomLine(), bottom_send_delay, &Grid::getBottomDistance, grid, opt);
+        recvLine(next, bottom_line, bottom_recv_delay, opt);
     }
     else if(rank % 2 == 0)
     {
-        TRY(MPI_Recv(bottom_line->data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
-            "Can't receive boundary line");
-        TRY(MPI_Send(grid.getBottomLine().data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD), 
-            "Can't send boundary line");
-        TRY(MPI_Recv(upper_line->data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
-            "Can't receive boundary line");
-        TRY(MPI_Send(grid.getUpperLine().data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD), 
-            "Can't send boundary line");
+        recvLine(next, bottom_line, bottom_recv_delay, opt);
+        sendLine(next, &grid.getBottomLine(), bottom_send_delay, &Grid::getBottomDistance, grid, opt);
+        recvLine(prev, upper_line, upper_recv_delay, opt);
+        sendLine(prev, &grid.getUpperLine(), upper_send_delay, &Grid::getUpperDistance, grid, opt);
     }
     else
     {
-        TRY(MPI_Send(grid.getUpperLine().data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD), 
-            "Can't send boundary line");
-        TRY(MPI_Recv(upper_line->data(), width, MPI_UINT8_T, prev, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
-            "Can't receive boundary line");
-        TRY(MPI_Send(grid.getBottomLine().data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD), 
-            "Can't send boundary line");
-        TRY(MPI_Recv(bottom_line->data(), width, MPI_UINT8_T, next, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE),
-            "Can't receive boundary line");
+        sendLine(prev, &grid.getUpperLine(), upper_send_delay, &Grid::getUpperDistance, grid, opt);
+        recvLine(prev, upper_line, upper_recv_delay, opt);
+        sendLine(next, &grid.getBottomLine(), bottom_send_delay, &Grid::getBottomDistance, grid, opt);
+        recvLine(next, bottom_line, bottom_recv_delay, opt);
+    }
+
+    if(opt)
+    {
+        if(upper_recv_delay == 0)
+            upper_send_delay = 0;
+        if(bottom_recv_delay == 0)
+            bottom_send_delay = 0;
+        if(upper_send_delay == 0)
+            upper_recv_delay = 0;
+        if(bottom_send_delay == 0)
+            bottom_recv_delay = 0;
     }
 }
 
@@ -115,8 +169,8 @@ int main(int argc, char** argv)
     int height = (rank == last_rank) ? (settings.height - last_rank * common_slice_height) : common_slice_height;
     int iterations_left = settings.iterations_limit;
 
-    std::vector<cell_t> *upper_line;
-    std::vector<cell_t> *bottom_line;
+    std::vector<cell_t> *upper_line = nullptr;
+    std::vector<cell_t> *bottom_line = nullptr;
     if(world_size > 1)
     {
         upper_line = new std::vector<cell_t>();
@@ -143,7 +197,7 @@ int main(int argc, char** argv)
 
     while(iterations_left > 0)
     {
-        exchange(rank, world_size, grids[grid_id], upper_line, bottom_line);
+        exchange(rank, world_size, grids[grid_id], settings.opt, upper_line, bottom_line);
 
         for(int j = 0; j < height; j++)
         {

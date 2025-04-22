@@ -2,6 +2,8 @@
 
 This is a repository with solutions to parallel programming problems using the MPI interface and C++.
 
+Also here is work with pthreads and scripts for SLURM.
+
 # Make
 
 To use `make`, you need to create a folder `executables` in the root of project.

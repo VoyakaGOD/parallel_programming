@@ -101,6 +101,28 @@ const std::vector<cell_t> &Grid::getBottomLine() const
     return content[height - 1];
 }
 
+int Grid::getUpperDistance() const
+{
+    for(int y = 0; y < height; y++)
+    {
+        for(int x = 0; x < width; x++)
+            if(content[y][x])
+                return y;
+    }
+    return height;
+}
+
+int Grid::getBottomDistance() const
+{
+    for(int y = height - 1; y >= 0; y--)
+    {
+        for(int x = 0; x < width; x++)
+            if(content[y][x])
+                return height - y - 1;
+    }
+    return height;
+}
+
 std::ostream *GridRenderer::getOutput()
 {
     return output;

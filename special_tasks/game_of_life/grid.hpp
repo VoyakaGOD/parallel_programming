@@ -45,7 +45,11 @@ public:
     void render(GridRenderer *renderer) const;
     const std::vector<cell_t> &getUpperLine() const;
     const std::vector<cell_t> &getBottomLine() const;
+    int getUpperDistance() const;
+    int getBottomDistance() const;
 };
+
+typedef int (Grid::*grid_dist_func_t)(void) const;
 
 class PipeGridRenderer : public GridRenderer
 {
