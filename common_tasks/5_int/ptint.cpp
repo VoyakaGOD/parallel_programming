@@ -134,6 +134,9 @@ void *handleGlobalStack(void *arg)
 
 int main(int argc, char** argv)
 {
+    pthread_mutex_init(&global_stack_mutex, nullptr);
+    pthread_mutex_init(&global_sum_mutex, nullptr);
+    pthread_mutex_init(&task_present_mutex, nullptr);
     require(argc >= 2, "You should enter number of threads");
     char *end;
     int threads_count = std::strtol(argv[1], &end, 10);
