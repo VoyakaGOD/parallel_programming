@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 
-struct Task
+struct TaskSetup
 {
     int from;
     int to;
@@ -12,7 +12,7 @@ struct Task
 
 void *calculatePart(void *arg)
 {
-    Task *task = static_cast<Task*>(arg);
+    TaskSetup *task = static_cast<TaskSetup*>(arg);
     int from = task->from;
     int to = task->to;
     // from [i = 1] to [i = N]
@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 
     pthread_t *threads = new pthread_t[threads_count];
     require(threads != nullptr, "Can't allocate memory for threads");
-    Task *tasks = new Task[threads_count];
+    TaskSetup *tasks = new TaskSetup[threads_count];
     require(tasks != nullptr, "Can't allocate memory for thread tasks");
 
     auto start = std::chrono::high_resolution_clock::now();
