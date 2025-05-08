@@ -40,6 +40,8 @@ double integrateV2(double A, double B, double fA, double fB)
     double sCB = (fC + fB) * h2;
     double sACB = sAC + sCB;
 
+    if((A == C) || (C == B))
+        return sACB;
     if(std::abs(sACB - sAB) > epsilon * std::abs(sACB))
         return integrateV2(A, C, fA, fC) + integrateV2(C, B, fC, fB);
     return sACB;
@@ -94,7 +96,7 @@ double integrateV3(double A, double B)
         double sCB = (fC + fB) * h;
         double sACB = sAC + sCB;
 
-        if(std::abs(sACB - sAB) > epsilon * std::abs(sACB))
+        if((std::abs(sACB - sAB) > epsilon * std::abs(sACB)) && (A != C) && (C != B))
         {
             PUSH(A, C, fA, fC, sAC);
             A = C;
@@ -133,7 +135,7 @@ double integrateV3Stack(double A, double B)
         double sCB = (fC + fB) * h;
         double sACB = sAC + sCB;
 
-        if(std::abs(sACB - sAB) > epsilon * std::abs(sACB))
+        if((std::abs(sACB - sAB) > epsilon * std::abs(sACB)) && (A != C) && (C != B))
         {
             stack.push({A, C, fA, fC, sAC});
             A = C;

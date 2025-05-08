@@ -81,7 +81,7 @@ void *handleGlobalStack(void *arg)
             double sCB = (fC + fB) * h;
             double sACB = sAC + sCB;
 
-            if(std::abs(sACB - sAB) < epsilon * std::abs(sACB))
+            if((std::abs(sACB - sAB) < epsilon * std::abs(sACB)) || (A == C) || (C == B))
             {
                 s += sACB;
                 if(IS_EMPTY(local_stack))

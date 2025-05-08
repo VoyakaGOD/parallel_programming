@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-double epsilon = 1e-6;
+double epsilon = 1e-7;
 double from = -2.99;
 double to = 5;
 
