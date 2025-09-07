@@ -4,7 +4,6 @@
 
 int main()
 {
-    omp_set_num_threads(4);
     int value = 0;
 
     // shared clause is not necessary

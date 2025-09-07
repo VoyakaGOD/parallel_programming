@@ -5,8 +5,6 @@
 
 int main(int argc, char** argv)
 {
-    omp_set_num_threads(4);
-
     require(argc == 2, "You should enter N[number of elements in sum]");
     int N = std::atoi(argv[1]);
     double result = 0;

@@ -5,8 +5,6 @@
 
 int main()
 {
-    omp_set_num_threads(4);
-
     std::cout << "Initial thread_id = " << std::this_thread::get_id() << std::endl;
 
     #pragma omp parallel
