@@ -78,6 +78,44 @@ void merge_sort(value_t *array, int left, int right, int threshold)
     merge(array + left, array + left, left_size, array + mid + 1, right_size);
 }
 
+void insertion_sort(value_t *array, int left, int right)
+{
+    for(int i = left + 1; i <= right; i++)
+    {
+        value_t pivot = array[i];
+        int j = i - 1;
+        while((j >= left) && (array[j] > pivot))
+        {
+            array[j+1] = array[j];
+            j--;
+        }
+        array[j+1] = pivot;
+    }
+}
+
+void hybrid_sort(value_t *array, int left, int right, int threshold)
+{
+    if((right - left) < threshold)
+    {
+        insertion_sort(array, left, right);
+        return;
+    }
+    
+    int mid = left + (right - left) / 2;
+
+    #pragma omp task shared(array) firstprivate(left, mid) 
+    hybrid_sort(array, left, mid, threshold);
+
+    #pragma omp task shared(array) firstprivate(left, mid)
+    hybrid_sort(array, mid + 1, right, threshold);
+
+    int left_size = mid - left + 1;
+    int right_size = right - mid;
+
+    #pragma omp taskwait
+    merge(array + left, array + left, left_size, array + mid + 1, right_size);
+}
+
 value_t *init_array(int N)
 {
     value_t *array = nullptr;
@@ -93,14 +131,15 @@ value_t *init_array(int N)
     return array;
 }
 
-double measure_msort_time(int N, int threshold, int num_threads)
+template <void (*Sort)(value_t *, int, int, int)>
+double measure_sort_time(int N, int threshold, int num_threads)
 {
     value_t *array = init_array(N);
     double start_time = omp_get_wtime();
 
     #pragma omp parallel num_threads(num_threads)
     #pragma omp single
-    merge_sort(array, 0, N - 1, threshold);
+    Sort(array, 0, N - 1, threshold);
 
     double end_time = omp_get_wtime();
     std::cout << "sorting time(N = " << N <<", threshold = " << threshold;
@@ -132,24 +171,18 @@ int main(int argc, char** argv)
         std::cout << (is_sorted(array, N) ? "sorted" : "not sorted") << " ---> ";
         merge_sort(array, 0, N-1, 10);
         std::cout << (is_sorted(array, N) ? "sorted" : "not sorted") << std::endl;
+        delete[] array;
+
+        array = init_array(N);
+        std::cout << "Hybrid: ";
+        std::cout << (is_sorted(array, N) ? "sorted" : "not sorted") << " ---> ";
+        hybrid_sort(array, 0, N-1, 10);
+        std::cout << (is_sorted(array, N) ? "sorted" : "not sorted") << std::endl;
+        delete[] array;
+
         return 0;
     }
 
-    for(int i = 1; i <= 8; i++)
-        measure_msort_time(N, 10, i);
-
-    std::cout << "-----" << std::endl;
-
-    for(int i = 1; i <= 8; i++)
-        measure_msort_time(N, 100, i);
-
-    std::cout << "-----" << std::endl;
-
-    for(int i = 1; i <= 8; i++)
-        measure_msort_time(N, 1000, i);
-
-    std::cout << "-----" << std::endl;
-
-    for(int i = 1; i <= 8; i++)
-        measure_msort_time(N, 10000, i);
+    for(int i = 1; i <= 15; i++)
+        measure_sort_time<hybrid_sort>(N, pow(2,i), 8);
 }
