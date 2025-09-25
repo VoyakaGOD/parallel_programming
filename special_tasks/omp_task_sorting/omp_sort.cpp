@@ -135,6 +135,21 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    for(int i = 1; i <= 22; i++)
-        measure_msort_time(N, pow(2, i), 8);
+    for(int i = 1; i <= 8; i++)
+        measure_msort_time(N, 10, i);
+
+    std::cout << "-----" << std::endl;
+
+    for(int i = 1; i <= 8; i++)
+        measure_msort_time(N, 100, i);
+
+    std::cout << "-----" << std::endl;
+
+    for(int i = 1; i <= 8; i++)
+        measure_msort_time(N, 1000, i);
+
+    std::cout << "-----" << std::endl;
+
+    for(int i = 1; i <= 8; i++)
+        measure_msort_time(N, 10000, i);
 }
