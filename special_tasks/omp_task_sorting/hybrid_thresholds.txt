@@ -1,0 +1,15 @@
+sorting time(N = 1000000, threshold = 2, threads = 8): 1.59494 s.
+sorting time(N = 1000000, threshold = 4, threads = 8): 0.918012 s.
+sorting time(N = 1000000, threshold = 8, threads = 8): 0.482855 s.
+sorting time(N = 1000000, threshold = 16, threads = 8): 0.254398 s.
+sorting time(N = 1000000, threshold = 32, threads = 8): 0.132332 s.
+sorting time(N = 1000000, threshold = 64, threads = 8): 0.0770566 s.
+sorting time(N = 1000000, threshold = 128, threads = 8): 0.0657629 s.
+sorting time(N = 1000000, threshold = 256, threads = 8): 0.0742474 s.
+sorting time(N = 1000000, threshold = 512, threads = 8): 0.110975 s.
+sorting time(N = 1000000, threshold = 1024, threads = 8): 0.168951 s.
+sorting time(N = 1000000, threshold = 2048, threads = 8): 0.267091 s.
+sorting time(N = 1000000, threshold = 4096, threads = 8): 0.57319 s.
+sorting time(N = 1000000, threshold = 8192, threads = 8): 1.11771 s.
+sorting time(N = 1000000, threshold = 16384, threads = 8): 1.9108 s.
+sorting time(N = 1000000, threshold = 32768, threads = 8): 3.80403 s.

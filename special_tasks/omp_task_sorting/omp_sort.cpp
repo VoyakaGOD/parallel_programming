@@ -183,6 +183,12 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    for(int i = 1; i <= 15; i++)
-        measure_sort_time<hybrid_sort>(N, pow(2,i), 8);
+    for(int i = 1; i <= 8; i++)
+        measure_sort_time<hybrid_sort>(N, 10, i);
+    for(int i = 1; i <= 8; i++)
+        measure_sort_time<hybrid_sort>(N, 100, i);
+    for(int i = 1; i <= 8; i++)
+        measure_sort_time<hybrid_sort>(N, 1000, i);
+    for(int i = 1; i <= 8; i++)
+        measure_sort_time<hybrid_sort>(N, 10000, i);
 }
