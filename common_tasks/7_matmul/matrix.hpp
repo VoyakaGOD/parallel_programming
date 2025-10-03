@@ -1,8 +1,10 @@
+#pragma once
 #include <require.hpp>
 #include <iostream>
 #include <vector>
+#include <omp.h>
 
-template<typename T = int64_t>
+template<typename T = int32_t>
 class Matrix
 {
 public:
@@ -11,6 +13,7 @@ public:
 private:
     int size;
     std::vector<T> data;
+    static int omp_threads;
 
     // no size check
     // only for size: 2|size
@@ -59,6 +62,13 @@ private:
     }
 
 public:
+    // no omp by default, count = 0
+    static void set_omp_threads(int count)
+    {
+        require(count >= 0, "Threads count should be non negative");
+        omp_threads = count;
+    }
+
     Matrix(int size) : size(size), data(size*size) {}
 
     Matrix(int size, generator_t generate) : Matrix(size)
@@ -77,7 +87,7 @@ public:
     {
         return Matrix(size, [](int i, int j)
         {
-            return static_cast<T>((i == j) ? 1 : 0); 
+            return static_cast<T>((i == j) ? 1 : 0);
         });
     }
 
@@ -125,6 +135,7 @@ public:
         require(left.size == right.size, "Inappropriate matrix sizes");
         int size = result.size;
 
+        #pragma omp parallel for collapse(2) num_threads(omp_threads) if(omp_threads > 0)
         for(int i = 0; i < size; i++)
         {
             for(int j = 0; j < size; j++)
@@ -142,6 +153,7 @@ public:
         require(left.size == right_tr.size, "Inappropriate matrix sizes");
         int size = result.size;
 
+        #pragma omp parallel for collapse(2) num_threads(omp_threads) if(omp_threads > 0)
         for(int i = 0; i < size; i++)
         {
             for(int j = 0; j < size; j++)
@@ -160,6 +172,8 @@ public:
         int size = result.size;
         require(size % block_size == 0, "Matrix size must be divisible by the block size");
 
+        #pragma omp parallel for collapse(2) num_threads(omp_threads) \
+        schedule(static) if(omp_threads > 0)
         for(int block_i = 0; block_i < size; block_i += block_size)
         {
             for(int block_j = 0; block_j < size; block_j += block_size)
@@ -185,6 +199,8 @@ public:
         int size = result.size;
         require(size % block_size == 0, "Matrix size must be divisible by the block size");
 
+        #pragma omp parallel for collapse(2) num_threads(omp_threads) \
+        schedule(static) if(omp_threads > 0)
         for(int block_i = 0; block_i < size; block_i += block_size)
         {
             for(int block_j = 0; block_j < size; block_j += block_size)
@@ -221,14 +237,28 @@ public:
         right.split(B11, B12, B21, B22);
         left.split(A11, A12, A21, A22);
 
-        Matrix M1 = multiply_Strassen(A11 + A22, B11 + B22, threshold);
-        Matrix M2 = multiply_Strassen(A21 + A22, B11, threshold);
-        Matrix M3 = multiply_Strassen(A11, B12 - B22, threshold);
-        Matrix M4 = multiply_Strassen(A22, B21 - B11, threshold);
-        Matrix M5 = multiply_Strassen(A11 + A12, B22, threshold);
-        Matrix M6 = multiply_Strassen(A21 - A11, B11 + B12, threshold);
-        Matrix M7 = multiply_Strassen(A12 - A22, B21 + B22, threshold);
-        
+        Matrix M1(0), M2(0), M3(0), M4(0), M5(0), M6(0), M7(0);
+        #pragma omp parallel num_threads(omp_threads) if(omp_threads > 0)
+        #pragma omp single
+        {
+            #pragma omp task
+            M1 = multiply_Strassen(A11 + A22, B11 + B22, threshold);
+            #pragma omp task
+            M2 = multiply_Strassen(A21 + A22, B11, threshold);
+            #pragma omp task
+            M3 = multiply_Strassen(A11, B12 - B22, threshold);
+            #pragma omp task
+            M4 = multiply_Strassen(A22, B21 - B11, threshold);
+            #pragma omp task
+            M5 = multiply_Strassen(A11 + A12, B22, threshold);
+            #pragma omp task
+            M6 = multiply_Strassen(A21 - A11, B11 + B12, threshold);
+            #pragma omp task
+            M7 = multiply_Strassen(A12 - A22, B21 + B22, threshold);
+
+            #pragma omp taskwait
+        }
+
         result.unite(M1+M4+M7-M5, M3+M5, M2+M4, M1+M3+M6-M2);
         return result;
     }
@@ -250,20 +280,12 @@ public:
 
     bool operator==(const Matrix &other) const
     {
-        if(other.size != size)
-            return false;
-
-        for(int i = 0; i < size; i++)
-            for(int j = 0; j < size; j++)
-                if(data[i*size+j] != other.data[i*size+j])
-                    return false;
-
-        return true;
+        return data == other.data;
     }
 
     bool operator!=(const Matrix &other) const
     {
-        return !(*this == other);
+        return data != other.data;
     }
 
     Matrix operator+(const Matrix &other) const
@@ -290,3 +312,6 @@ public:
         return diff;
     }
 };
+
+template<typename T>
+int Matrix<T>::omp_threads = 0;

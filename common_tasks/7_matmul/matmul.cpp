@@ -1,6 +1,7 @@
 #include "matrix.hpp"
-#include <omp.h>
 
+
+// 64 -> 2048
 int main()
 {
     int size = 1024;
@@ -37,17 +38,43 @@ int main()
     std::cout << "block: " << ((C == reference) ? "good" : "fail") << std::endl;
     std::cout << (omp_get_wtime() - start) << " s." << std::endl;
     
+    // start = omp_get_wtime();
+    // B.transpose_block(16);
+    // middle = omp_get_wtime();
+    // Matrix<>::multiply_n3_bt(C, A, B, 16);
+    // std::cout << "bt: " << ((C == reference) ? "good" : "fail") << std::endl;
+    // std::cout << (omp_get_wtime() - start) << " s, transpose: ";
+    // std::cout << (middle - start) << " s." << std::endl;
+    // B.transpose_block(16);
+
+    start = omp_get_wtime();
+    C = Matrix<>::multiply_Strassen(A, B, 64);
+    std::cout << "St: " << ((C == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s." << std::endl;
+
+    Matrix<>::set_omp_threads(4);
+
+    start = omp_get_wtime();
+    Matrix<>::multiply_n3(C, A, B);
+    std::cout << "omp n3: " << ((C == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s." << std::endl;
+
     start = omp_get_wtime();
     B.transpose_block(16);
     middle = omp_get_wtime();
-    Matrix<>::multiply_n3_bt(C, A, B, 16);
-    std::cout << "bt: " << ((C == reference) ? "good" : "fail") << std::endl;
+    Matrix<>::multiply_n3_transpose(C, A, B);
+    std::cout << "omp tr: " << ((C == reference) ? "good" : "fail") << std::endl;
     std::cout << (omp_get_wtime() - start) << " s, transpose: ";
     std::cout << (middle - start) << " s." << std::endl;
     B.transpose_block(16);
 
     start = omp_get_wtime();
+    Matrix<>::multiply_n3_block(C, A, B, 16);
+    std::cout << "omp block: " << ((C == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s." << std::endl;
+
+    start = omp_get_wtime();
     C = Matrix<>::multiply_Strassen(A, B, 64);
-    std::cout << "St: " << ((C == reference) ? "good" : "fail") << std::endl;
+    std::cout << "omp St: " << ((C == reference) ? "good" : "fail") << std::endl;
     std::cout << (omp_get_wtime() - start) << " s." << std::endl;
 }
