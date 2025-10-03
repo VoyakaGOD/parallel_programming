@@ -1,5 +1,4 @@
-#include "matrix.hpp"
-
+#include "matrix32.hpp"
 
 // 64 -> 2048
 int main()
@@ -52,7 +51,20 @@ int main()
     std::cout << "St: " << ((C == reference) ? "good" : "fail") << std::endl;
     std::cout << (omp_get_wtime() - start) << " s." << std::endl;
 
-    Matrix<>::set_omp_threads(4);
+    start = omp_get_wtime();
+    Matrix<>::multiply_n3_omp_simd(C, A, B);
+    std::cout << "n3 omp simd: " << ((C == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s." << std::endl;
+
+    Matrix32 A32 = A;
+    Matrix32 B32 = B;
+    Matrix32 C32(size);
+    start = omp_get_wtime();
+    Matrix32::multiply_n3_avx512(C32, A32, B32);
+    std::cout << "n3 avx512: " << ((C32 == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s." << std::endl;
+
+    Matrix<>::set_omp_threads(8);
 
     start = omp_get_wtime();
     Matrix<>::multiply_n3(C, A, B);
@@ -76,5 +88,15 @@ int main()
     start = omp_get_wtime();
     C = Matrix<>::multiply_Strassen(A, B, 64);
     std::cout << "omp St: " << ((C == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s." << std::endl;
+
+    start = omp_get_wtime();
+    Matrix<>::multiply_n3_omp_simd(C, A, B);
+    std::cout << "n3 omp simd: " << ((C == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s." << std::endl;
+
+    start = omp_get_wtime();
+    Matrix32::multiply_n3_avx512(C32, A32, B32);
+    std::cout << "omp n3 avx512: " << ((C32 == reference) ? "good" : "fail") << std::endl;
     std::cout << (omp_get_wtime() - start) << " s." << std::endl;
 }

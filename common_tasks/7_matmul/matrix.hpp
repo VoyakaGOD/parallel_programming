@@ -1,4 +1,5 @@
 #pragma once
+
 #include <require.hpp>
 #include <iostream>
 #include <vector>
@@ -10,7 +11,7 @@ class Matrix
 public:
     typedef T (*generator_t)(int i, int j);
 
-private:
+protected:
     int size;
     std::vector<T> data;
     static int omp_threads;
@@ -173,7 +174,7 @@ public:
         require(size % block_size == 0, "Matrix size must be divisible by the block size");
 
         #pragma omp parallel for collapse(2) num_threads(omp_threads) \
-        schedule(static) if(omp_threads > 0)
+            schedule(static) if(omp_threads > 0)
         for(int block_i = 0; block_i < size; block_i += block_size)
         {
             for(int block_j = 0; block_j < size; block_j += block_size)
@@ -200,7 +201,7 @@ public:
         require(size % block_size == 0, "Matrix size must be divisible by the block size");
 
         #pragma omp parallel for collapse(2) num_threads(omp_threads) \
-        schedule(static) if(omp_threads > 0)
+            schedule(static) if(omp_threads > 0)
         for(int block_i = 0; block_i < size; block_i += block_size)
         {
             for(int block_j = 0; block_j < size; block_j += block_size)
@@ -261,6 +262,28 @@ public:
 
         result.unite(M1+M4+M7-M5, M3+M5, M2+M4, M1+M3+M6-M2);
         return result;
+    }
+
+    static void multiply_n3_omp_simd(Matrix result, Matrix left, Matrix right)
+    {
+        require(result.size == left.size, "Inappropriate matrix sizes");
+        require(left.size == right.size, "Inappropriate matrix sizes");
+        int size = result.size;
+
+        #pragma omp parallel for collapse(2) num_threads(omp_threads) if(omp_threads > 0)
+        for(int i = 0; i < size; i++)
+        {
+            for(int j = 0; j < size; j++)
+            {
+                T item = static_cast<T>(0);
+
+                #pragma omp simd reduction(+:item)
+                for(int k = 0; k < size; k++)
+                    item += left.data[i*size+k]*right.data[k*size+j];
+                
+                result.data[i*size+j] = item;
+            }
+        }
     }
 
     friend std::ostream &operator<<(std::ostream& out, const Matrix &matrix)
