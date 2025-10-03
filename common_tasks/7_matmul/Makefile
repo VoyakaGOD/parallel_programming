@@ -6,7 +6,7 @@ TASKS = matmul
 
 all: $(addprefix $(BUILD_FOLDER)/, $(TASKS))
 
-$(BUILD_FOLDER)/%: %.cpp
+$(BUILD_FOLDER)/%: %.cpp matrix.hpp
 	mkdir -p $(BUILD_FOLDER)
 	g++ -fopenmp $< -I$(SHARED_FOLDER) -o $@
 
