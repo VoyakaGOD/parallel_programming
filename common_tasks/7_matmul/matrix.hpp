@@ -5,7 +5,7 @@
 #include <vector>
 #include <omp.h>
 
-template<typename T = int32_t>
+template<typename T = int32_t, typename Alloc = typename std::vector<T>::allocator_type>
 class Matrix
 {
 public:
@@ -13,8 +13,10 @@ public:
 
 protected:
     int size;
-    std::vector<T> data;
+    std::vector<T, Alloc> data;
     static int omp_threads;
+
+    Matrix(int size, const T *raw_data) : size(size), data(raw_data, raw_data + size*size) {}
 
     // no size check
     // only for size: 2|size
@@ -63,6 +65,21 @@ protected:
     }
 
 public:
+    int get_size() const
+    {
+        return size;
+    }
+
+    const T *get_data() const
+    {
+        return data.data();
+    }
+
+    T *get_data()
+    {
+        return data.data();
+    }
+
     // no omp by default, count = 0
     static void set_omp_threads(int count)
     {
@@ -130,7 +147,7 @@ public:
         }
     }
 
-    static void multiply_n3(Matrix result, Matrix left, Matrix right)
+    static void multiply_n3(Matrix &result, const Matrix &left, const Matrix &right)
     {
         require(result.size == left.size, "Inappropriate matrix sizes");
         require(left.size == right.size, "Inappropriate matrix sizes");
@@ -148,7 +165,7 @@ public:
         }
     }
 
-    static void multiply_n3_transpose(Matrix result, Matrix left, Matrix right_tr)
+    static void multiply_n3_transpose(Matrix &result, const Matrix &left, const Matrix &right_tr)
     {
         require(result.size == left.size, "Inappropriate matrix sizes");
         require(left.size == right_tr.size, "Inappropriate matrix sizes");
@@ -166,7 +183,7 @@ public:
         }
     }
 
-    static void multiply_n3_block(Matrix result, Matrix left, Matrix right, int block_size)
+    static void multiply_n3_block(Matrix &result, const Matrix &left, const Matrix &right, int block_size)
     {
         require(result.size == left.size, "Inappropriate matrix sizes");
         require(left.size == right.size, "Inappropriate matrix sizes");
@@ -193,7 +210,7 @@ public:
     }
 
     // block with transpose
-    static void multiply_n3_bt(Matrix result, Matrix left, Matrix right_tr, int block_size)
+    static void multiply_n3_bt(Matrix &result, const Matrix &left, const Matrix &right_tr, int block_size)
     {
         require(result.size == left.size, "Inappropriate matrix sizes");
         require(left.size == right_tr.size, "Inappropriate matrix sizes");
@@ -219,7 +236,7 @@ public:
         }
     }
 
-    static Matrix multiply_Strassen(Matrix left, Matrix right, int threshold = 16)
+    static Matrix multiply_Strassen(const Matrix &left, const Matrix &right, int threshold = 16)
     {
         require(left.size == right.size, "Inappropriate matrix sizes");
         int size = left.size;
@@ -264,7 +281,7 @@ public:
         return result;
     }
 
-    static void multiply_n3_omp_simd(Matrix result, Matrix left, Matrix right)
+    static void multiply_n3_omp_simd(Matrix &result, const Matrix &left, const Matrix &right)
     {
         require(result.size == left.size, "Inappropriate matrix sizes");
         require(left.size == right.size, "Inappropriate matrix sizes");
@@ -336,5 +353,5 @@ public:
     }
 };
 
-template<typename T>
-int Matrix<T>::omp_threads = 0;
+template<typename T, typename Alloc>
+int Matrix<T, Alloc>::omp_threads = 0;
