@@ -5,7 +5,7 @@
 #include <vector>
 #include <omp.h>
 
-template<typename T = int32_t, typename Alloc = typename std::vector<T>::allocator_type>
+template<typename T = int32_t>
 class Matrix
 {
 public:
@@ -13,10 +13,8 @@ public:
 
 protected:
     int size;
-    std::vector<T, Alloc> data;
+    std::vector<T> data;
     static int omp_threads;
-
-    Matrix(int size, const T *raw_data) : size(size), data(raw_data, raw_data + size*size) {}
 
     // no size check
     // only for size: 2|size
@@ -353,5 +351,5 @@ public:
     }
 };
 
-template<typename T, typename Alloc>
-int Matrix<T, Alloc>::omp_threads = 0;
+template<typename T>
+int Matrix<T>::omp_threads = 0;

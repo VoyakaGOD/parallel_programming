@@ -3,7 +3,7 @@
 // 64 -> 2048
 int main()
 {
-    int size = 512;
+    int size = 1024;
     Matrix<> A = Matrix<>::new_identity_matrix(size);
     A[3][4] = 7;
     Matrix<> B = Matrix<>::new_identity_matrix(size);
@@ -59,13 +59,27 @@ int main()
     Matrix32 A32 = A;
     Matrix32 B32 = B;
     Matrix32 C32(size);
-    Matrix32 reference32 = reference;
     start = omp_get_wtime();
-    // Matrix32::multiply_n3_avx512(C32, A32, B32);
-    std::cout << "n3 avx512: " << ((C32 == reference32) ? "good" : "fail") << std::endl;
+    Matrix32::multiply_n3_avx512(C32, A32, B32);
+    std::cout << "n3 avx512: " << ((C32 == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s." << std::endl;
+
+    start = omp_get_wtime();
+    B32.transpose_block(16);
+    middle = omp_get_wtime();
+    Matrix32::multiply_n3_avx512_tr(C32, A32, B32);
+    std::cout << "n3 avx512 tr: " << ((C32 == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s, transpose: ";
+    std::cout << (middle - start) << " s." << std::endl;
+    B32.transpose_block(16);
+
+    start = omp_get_wtime();
+    C32 = Matrix32::multiply_Strassen_avx512(A32, B32, 64);
+    std::cout << "St avx512: " << ((C32 == reference) ? "good" : "fail") << std::endl;
     std::cout << (omp_get_wtime() - start) << " s." << std::endl;
 
     Matrix<>::set_omp_threads(8);
+    std::cout << "\n*Threads = 8:" << std::endl;
 
     start = omp_get_wtime();
     Matrix<>::multiply_n3(C, A, B);
@@ -82,7 +96,7 @@ int main()
     B.transpose_block(16);
 
     start = omp_get_wtime();
-    Matrix<>::multiply_n3_block(C, A, B, 16);
+    Matrix<>::multiply_n3_block(C, A, B, 4);
     std::cout << "omp block: " << ((C == reference) ? "good" : "fail") << std::endl;
     std::cout << (omp_get_wtime() - start) << " s." << std::endl;
 
@@ -93,12 +107,25 @@ int main()
 
     start = omp_get_wtime();
     Matrix<>::multiply_n3_omp_simd(C, A, B);
-    std::cout << "n3 omp simd: " << ((C == reference) ? "good" : "fail") << std::endl;
+    std::cout << "omp n3 omp simd: " << ((C == reference) ? "good" : "fail") << std::endl;
     std::cout << (omp_get_wtime() - start) << " s." << std::endl;
 
     start = omp_get_wtime();
-    Matrix32::multiply_n3_avx512(C32.get_data(), A32.get_data(), B32.get_data(), C32.get_size());
-    double time = omp_get_wtime() - start;
-    std::cout << "omp n3 avx512: " << ((C32 == reference32) ? "good" : "fail") << std::endl;
-    std::cout << time << " s." << std::endl;
+    Matrix32::multiply_n3_avx512(C32, A32, B32);
+    std::cout << "omp n3 avx512: " << ((C32 == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s." << std::endl;
+
+    start = omp_get_wtime();
+    B32.transpose_block(16);
+    middle = omp_get_wtime();
+    Matrix32::multiply_n3_avx512_tr(C32, A32, B32);
+    std::cout << "omp n3 avx512 tr: " << ((C32 == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s, transpose: ";
+    std::cout << (middle - start) << " s." << std::endl;
+    B32.transpose_block(16);
+
+    start = omp_get_wtime();
+    C32 = Matrix32::multiply_Strassen_avx512(A32, B32, 64);
+    std::cout << "omp St avx512: " << ((C32 == reference) ? "good" : "fail") << std::endl;
+    std::cout << (omp_get_wtime() - start) << " s." << std::endl;
 }
