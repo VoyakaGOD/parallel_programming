@@ -143,47 +143,47 @@ public:
         return result;
     }
 
-    // Matrix32 operator+(const Matrix32 &other) const
-    // {
-    //     require(size == other.size, "Inappropriate matrix sizes");
+    Matrix32 operator+(const Matrix32 &other) const
+    {
+        require(size == other.size, "Inappropriate matrix sizes");
 
-    //     Matrix32 sum(size);
-    //     int N = size*size;
-    //     int n = 0;
+        Matrix32 sum(size);
+        int N = size*size;
+        int n = 0;
 
-    //     for(; n + 15 < N; n += 16)
-    //     {
-    //         __m512i left = _mm512_loadu_epi32(&data[n]);
-    //         __m512i right = _mm512_loadu_epi32(&other.data[n]);
-    //         __m512i block = _mm512_add_epi32(left, right);
-    //         _mm512_storeu_epi32(&sum.data[n], block);
-    //     }
+        for(; n + 15 < N; n += 16)
+        {
+            __m512i left = _mm512_loadu_epi32(&data[n]);
+            __m512i right = _mm512_loadu_epi32(&other.data[n]);
+            __m512i block = _mm512_add_epi32(left, right);
+            _mm512_storeu_epi32(&sum.data[n], block);
+        }
 
-    //     for (; n < N; n++)
-    //         sum.data[n] = data[n] + other.data[n];
+        for (; n < N; n++)
+            sum.data[n] = data[n] + other.data[n];
 
-    //     return sum;
-    // }
+        return sum;
+    }
 
-    // Matrix32 operator-(const Matrix32 &other) const
-    // {
-    //     require(size == other.size, "Inappropriate matrix sizes");
+    Matrix32 operator-(const Matrix32 &other) const
+    {
+        require(size == other.size, "Inappropriate matrix sizes");
 
-    //     Matrix32 diff(size);
-    //     int N = size*size;
-    //     int n = 0;
+        Matrix32 diff(size);
+        int N = size*size;
+        int n = 0;
 
-    //     for(; n + 15 < N; n += 16)
-    //     {
-    //         __m512i left = _mm512_loadu_epi32(&data[n]);
-    //         __m512i right = _mm512_loadu_epi32(&other.data[n]);
-    //         __m512i block = _mm512_sub_epi32(left, right);
-    //         _mm512_storeu_epi32(&diff.data[n], block);
-    //     }
+        for(; n + 15 < N; n += 16)
+        {
+            __m512i left = _mm512_loadu_epi32(&data[n]);
+            __m512i right = _mm512_loadu_epi32(&other.data[n]);
+            __m512i block = _mm512_sub_epi32(left, right);
+            _mm512_storeu_epi32(&diff.data[n], block);
+        }
 
-    //     for (; n < N; n++)
-    //         diff.data[n] = data[n] - other.data[n];
+        for (; n < N; n++)
+            diff.data[n] = data[n] - other.data[n];
 
-    //     return diff;
-    // }
+        return diff;
+    }
 };
