@@ -137,18 +137,18 @@ int main()
     // Matrix<> reference(size);
     // Matrix<> C(size);
 
-    Matrix<>::set_omp_threads(8);
-    int size = 1024;
-    for(int bsize = 1; bsize <= 1024; bsize *= 2)
+    // Matrix<>::set_omp_threads(8);
+    int bsize = 128;
+    for(int size = 64; size <= 2048; size *= 2)
     {
         Matrix<> A = Matrix<>::new_identity_matrix(size);
-        A[3][4] = 7;
+        // A[3][4] = 7;
         Matrix<> B = Matrix<>::new_identity_matrix(size);
-        B[2][3] = 5;
+        // B[2][3] = 5;
         Matrix<> C(size);
         double start = omp_get_wtime();
         // B.transpose();
-        Matrix<>::multiply_n3_block(C, A, B, bsize);
+        C = Matrix<>::multiply_Strassen(A, B, bsize);
         std::cout << (omp_get_wtime() - start) << ", ";
         std::cout.flush();
     }
