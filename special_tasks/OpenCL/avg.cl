@@ -1,7 +1,7 @@
 __kernel void sum_array(
-    __global    const float*    input,
-    __global    float*          output,
-    __local     float*          local_sum
+    __global    const float    *input,
+    __global    float          *output,
+    __local     float          *local_sum
 )
 {
     int local_id = get_local_id(0);

@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-void require(bool condition, const char *message)
+inline void require(bool condition, const char *message)
 {
     if(condition)
         return;
