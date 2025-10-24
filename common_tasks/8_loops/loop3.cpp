@@ -28,16 +28,16 @@ void do_parallel(std::vector<std::vector<double>> &a, std::vector<std::vector<do
     TRY(MPI_Comm_rank(MPI_COMM_WORLD, &rank), "Can't get rank of this process");
     int world_size;
     TRY(MPI_Comm_size(MPI_COMM_WORLD, &world_size), "Can't get total count of processes");
-    int partition_size = JSIZE / world_size;
-    int last_rank = world_size - 1;
-    int j_from = rank * partition_size;
-    int j_to = (rank == last_rank) ? JSIZE : ((rank + 1) * partition_size);
+    TRY((ISIZE-1) % world_size, "ISIZE-1 should be divisible by world_size for mpi");
+    int partition_size = (ISIZE-1) / world_size;
+    int i_from = rank * partition_size;
+    int i_to = (rank + 1) * partition_size;
     if(rank == 0)
         std::cout << "mpi world size = " << world_size << std::endl;
 
-    for (int j = j_from; j < j_to; j++)
+    for (int i = i_from; i < i_to; i++)
     {
-        for (int i = 0; i < ISIZE-1; i++)
+        for (int j = 0; j < JSIZE; j++)
         {
             a[i][j] = sin(0.1*a[i+1][j]);
             b[i][j] = a[i][j]*1.5;
@@ -48,44 +48,24 @@ void do_parallel(std::vector<std::vector<double>> &a, std::vector<std::vector<do
     {
         for (int src = 1; src < world_size; src++)
         {
-            int src_j_from = src * partition_size;
-            int src_j_to = (src == last_rank) ? JSIZE : ((src + 1) * partition_size);
-            int cols = src_j_to - src_j_from;
+            int src_i_from = src * partition_size;
+            int src_i_to = (src + 1) * partition_size;
 
-            std::vector<double> recv_a(ISIZE * cols);
-            std::vector<double> recv_b(ISIZE * cols);
-            MPI_Recv(recv_a.data(), ISIZE * cols, MPI_DOUBLE, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            MPI_Recv(recv_b.data(), ISIZE * cols, MPI_DOUBLE, src, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-            // for (int i = 0; i < ISIZE; i++)
-            // {
-            //     for (int j = 0; j < cols; j++)
-            //     {
-            //         a[i][src_j_from + j] = recv_a[i * cols + j];
-            //         b[i][src_j_from + j] = recv_b[i * cols + j];
-            //     }
-            // }
+            for(int i = i_from; i < i_to; i++)
+            {
+                MPI_Recv(a[i].data(), JSIZE, MPI_DOUBLE, src, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                MPI_Recv(b[i].data(), JSIZE, MPI_DOUBLE, src, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            }
         }
     }
     else
     {
-        int cols = j_to - j_from;
-        std::vector<double> send_a(ISIZE * cols);
-        std::vector<double> send_b(ISIZE * cols);
-
-        for (int i = 0; i < ISIZE; i++)
+        for(int i = i_from; i < i_to; i++)
         {
-            for (int j = 0; j < cols; j++)
-            {
-                send_a[i * cols + j] = a[i][j_from + j];
-                send_b[i * cols + j] = b[i][j_from + j];
-            }
+            MPI_Send(a[i].data(), JSIZE, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+            MPI_Send(b[i].data(), JSIZE, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
         }
-
-        MPI_Send(send_a.data(), ISIZE * cols, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-        MPI_Send(send_b.data(), ISIZE * cols, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
     }
-    BARRIER;
 }
 
 int main(int argc, char **argv)
@@ -97,8 +77,8 @@ int main(int argc, char **argv)
     std::vector<std::vector<double>> a(ISIZE, std::vector<double>(JSIZE));
     std::vector<std::vector<double>> b(ISIZE, std::vector<double>(JSIZE));
     for (int i = 0; i < ISIZE; i++)
-            for (int j = 0; j < JSIZE; j++)
-                a[i][j] = 10 * i + j;
+        for (int j = 0; j < JSIZE; j++)
+            a[i][j] = 10 * i + j;
 
     double start = MPI_Wtime();
     if(argc > 1)
