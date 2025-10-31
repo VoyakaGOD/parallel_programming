@@ -10,6 +10,9 @@
 #ifndef JSIZE
     #define JSIZE 5000
 #endif
+#ifndef ITCOUNT
+    #define ITCOUNT 20
+#endif
 
 void do_sequential(std::vector<std::vector<double>> &a, std::vector<std::vector<double>> &b)
 {
@@ -35,18 +38,18 @@ void do_parallel(std::vector<std::vector<double>> &a, std::vector<std::vector<do
     if(rank == 0)
         std::cout << "mpi world size = " << world_size << std::endl;
 
-    for (int i = i_from; i < i_to; i++)
+    for(int i = i_from; i < i_to; i++)
     {
-        for (int j = 0; j < JSIZE; j++)
+        for(int j = 0; j < JSIZE; j++)
         {
             a[i][j] = sin(0.1*a[i+1][j]);
             b[i][j] = a[i][j]*1.5;
         }
     }
 
-    if (rank == 0)
+    if(rank == 0)
     {
-        for (int src = 1; src < world_size; src++)
+        for(int src = 1; src < world_size; src++)
         {
             int src_i_from = src * partition_size;
             int src_i_to = (src + 1) * partition_size;
@@ -76,7 +79,7 @@ int main(int argc, char **argv)
 
     std::vector<std::vector<double>> a(ISIZE, std::vector<double>(JSIZE));
     std::vector<std::vector<double>> b(ISIZE, std::vector<double>(JSIZE));
-    for (int i = 0; i < ISIZE; i++)
+    for(int i = 0; i < ISIZE; i++)
         for (int j = 0; j < JSIZE; j++)
             a[i][j] = 10 * i + j;
 
@@ -86,10 +89,15 @@ int main(int argc, char **argv)
         switch (argv[1][0])
         {
         case 'p':
-            do_parallel(a, b);
+            for(int i = 0; i < ITCOUNT; i++)
+            {
+                do_parallel(a, b);
+                BARRIER;
+            }
             break;
         default:
-            do_sequential(a, b);
+            for(int i = 0; i < ITCOUNT; i++)
+                do_sequential(a, b);
             break;
         }
     }
@@ -106,17 +114,17 @@ int main(int argc, char **argv)
 
     if(rank == 0)
     {
-        if(ISIZE * JSIZE <= 1000)
+        if(ISIZE * JSIZE <= 10000)
         {
-            for (int i = 0; i < ISIZE; i++)
+            for(int i = 0; i < ISIZE; i++)
             {
-                for (int j = 0; j < JSIZE; j++)
+                for(int j = 0; j < JSIZE; j++)
                     std::cout << b[i][j] << ' ';
                 std::cout << std::endl;
             }
         }
 
-        std::cout << "time " << (end - start) << "s." << std::endl;
+        std::cout << "time " << (end - start) / ITCOUNT << "s." << std::endl;
     }
 
     TRY(MPI_Finalize(), "Bad MPI finalization");

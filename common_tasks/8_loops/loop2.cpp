@@ -67,7 +67,7 @@ int main(int argc, char **argv)
     }
     double end = omp_get_wtime();
 
-    if(ISIZE * JSIZE <= 1000)
+    if(ISIZE * JSIZE <= 10000)
     {
         for (int i = 0; i < ISIZE; i++)
         {

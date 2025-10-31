@@ -11,6 +11,9 @@
 #ifndef JSIZE
     #define JSIZE 5000
 #endif
+#ifndef ITCOUNT
+    #define ITCOUNT 20
+#endif
 
 void do_sequential(std::vector<std::vector<double>> &a)
 {
@@ -77,8 +80,8 @@ int main(int argc, char **argv)
     TRY(MPI_Comm_size(MPI_COMM_WORLD, &world_size), "Can't get total count of processes");
     std::vector<std::vector<double>> a(ISIZE, std::vector<double>(JSIZE));
 
-    for (int i = 0; i < ISIZE; i++)
-        for (int j = 0; j < JSIZE; j++)
+    for(int i = 0; i < ISIZE; i++)
+        for(int j = 0; j < JSIZE; j++)
             a[i][j] = 10 * i + j;
 
     double start = MPI_Wtime();
@@ -91,22 +94,29 @@ int main(int argc, char **argv)
             #pragma omp parallel
             #pragma omp single
             std::cout << "omp threads = " << omp_get_num_threads() << std::endl;
-            do_parallel_omp(a);
+            for(int i = 0; i < ITCOUNT; i++)
+                do_parallel_omp(a);
             break;
         case 'c':
             omp_set_num_threads(atoi(argv[1] + 1));
             #pragma omp parallel
             #pragma omp single
             std::cout << "cache, omp threads = " << omp_get_num_threads() << std::endl;
-            do_parallel_omp_cache(a);
+            for(int i = 0; i < ITCOUNT; i++)
+                do_parallel_omp_cache(a);
             break;
         case 'm':
             if(rank == 0)
                 std::cout << "mpi computers = " << world_size << std::endl;
-            do_parallel_mpi(a);
+            for(int i = 0; i < ITCOUNT; i++)
+            {
+                do_parallel_mpi(a);
+                BARRIER;
+            }
             break;
         default:
-            do_sequential(a);
+            for(int i = 0; i < ITCOUNT; i++)
+                do_sequential(a);
             break;
         }
     }
@@ -120,7 +130,7 @@ int main(int argc, char **argv)
 
     if(rank == 0)
     {
-        if(ISIZE * JSIZE <= 1000)
+        if(ISIZE * JSIZE <= 10000)
         {
             for (int i = 0; i < ISIZE; i++)
             {
@@ -130,7 +140,7 @@ int main(int argc, char **argv)
             }
         }
 
-        std::cout << "time " << (end - start) << "s." << std::endl;
+        std::cout << "time " << (end - start) / ITCOUNT << "s." << std::endl;
     }
 
     TRY(MPI_Finalize(), "Bad MPI finalization");
