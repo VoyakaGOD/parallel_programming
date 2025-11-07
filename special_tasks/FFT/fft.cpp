@@ -1,6 +1,6 @@
 #include <require.hpp>
-#include <fstream>
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <complex>
 #include <cmath>
@@ -9,7 +9,7 @@
 const double pi = M_PI;
 typedef std::complex<double> value_t;
 
-#define THRESHOLD 64
+#define THRESHOLD 128
 
 std::vector<value_t> fft(std::vector<value_t> &signal)
 {
@@ -38,6 +38,33 @@ std::vector<value_t> fft(std::vector<value_t> &signal)
     }
 
     return result;
+}
+
+void impl__inplace_fft(std::vector<value_t> &data, int n, int offset, int stride)
+{
+    if(n == 1)
+        return;
+
+    int n2 = n / 2;
+    impl__inplace_fft(data, n2, offset, 2*stride);
+    impl__inplace_fft(data, n2, offset + stride, 2*stride);
+
+    double angle = -2 * pi / n;
+    value_t w(1), wn(cos(angle), sin(angle));
+    for(int i = 0; i < n2; i++)
+    {
+        value_t Em = data[offset + i*2*stride];
+        value_t Om = data[offset + (i*2+1)*stride];
+        data[offset + i*stride] = Em + w * Om;
+        data[offset + (i+n2)*stride] = Em - w * Om;
+        w *= wn;
+    }
+}
+
+std::vector<value_t> &inplace_fft(std::vector<value_t> &inout_data)
+{
+    impl__inplace_fft(inout_data, inout_data.size(), 0, 1);
+    return inout_data;
 }
 
 std::vector<value_t> impl__fft_omp(std::vector<value_t> &signal)
@@ -86,6 +113,39 @@ std::vector<value_t> fft_omp(std::vector<value_t> &signal, int threads)
     return result;
 }
 
+void impl__inplace_fft_omp(std::vector<value_t> &data, int n, int offset, int stride)
+{
+    if(n == 1)
+        return;
+
+    int n2 = n / 2;
+    #pragma omp task if(n > THRESHOLD)
+    impl__inplace_fft_omp(data, n2, offset, stride*2);
+    #pragma omp task if(n > THRESHOLD)
+    impl__inplace_fft_omp(data, n2, offset + stride, stride*2);
+    #pragma omp taskwait
+
+    double angle = -2 * pi / n;
+    value_t w(1), wn(cos(angle), sin(angle));
+    for(int i = 0; i < n2; i++)
+    {
+        value_t Em = data[offset + i*2*stride];
+        value_t Om = data[offset + (i*2+1)*stride];
+        data[offset + i*stride] = Em + w * Om;
+        data[offset + (i+n2)*stride] = Em - w * Om;
+        w *= wn;
+    }
+}
+
+std::vector<value_t> &inplace_fft_omp(std::vector<value_t> &inout_data, int threads)
+{
+    #pragma omp parallel num_threads(threads)
+    #pragma omp single
+    impl__inplace_fft_omp(inout_data, inout_data.size(), 0, 1);
+
+    return inout_data;
+}
+
 std::vector<double> read_csv(const std::string &filename)
 {
     std::ifstream file(filename);
@@ -118,15 +178,17 @@ void write_csv(const std::string &filename, const std::vector<value_t> &spectrum
 
 int main(int argc, char **argv)
 {
-    require(argc >= 3, "Usage: fft (in) (out) [o(threads)]");
+    require(argc >= 4, "Usage: fft (i|-) (in) (out) [o(threads)]");
+    bool inplace = (argv[1][0] == 'i') && (argv[1][1] == '\0');
+    
     int threads = 0;
-    if((argc == 4) && (argv[3][0] == 'o'))
-        threads = std::atoi(argv[3] + 1);
+    if((argc == 5) && (argv[4][0] == 'o'))
+        threads = std::atoi(argv[4] + 1);
     if(threads > 0)
         std::cout << "omp threads: " << threads << std::endl;
 
-    std::string input_file = argv[1];
-    std::string output_file = argv[2];
+    std::string input_file = argv[2];
+    std::string output_file = argv[3];
 
     std::vector<double> signal_values = read_csv(input_file);
     int n = signal_values.size();
@@ -135,10 +197,22 @@ int main(int argc, char **argv)
     std::vector<value_t> signal(signal_values.begin(), signal_values.end());
     double start = omp_get_wtime();
     std::vector<value_t> spectrum;
-    if(threads > 0)
-        spectrum = fft_omp(signal, threads);
+    if(inplace)
+    {
+        std::cout << "inplace version" << std::endl;
+        spectrum = std::move(signal);
+        if(threads > 0)
+            inplace_fft_omp(spectrum, threads);
+        else
+            inplace_fft(spectrum);
+    }
     else
-        spectrum = fft(signal);
+    {
+        if(threads > 0)
+            spectrum = fft_omp(signal, threads);
+        else
+            spectrum = fft(signal);
+    }
     double end = omp_get_wtime();
     write_csv(output_file, spectrum);
 
