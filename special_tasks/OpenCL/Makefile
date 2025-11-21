@@ -8,7 +8,7 @@ all: $(addprefix $(BUILD_FOLDER)/, $(TASKS))
 
 $(BUILD_FOLDER)/%: %.cpp ocl.cpp
 	mkdir -p $(BUILD_FOLDER)
-	g++ $< ocl.cpp -I$(SHARED_FOLDER) -lOpenCL -o $@
+	g++ $< ocl.cpp -I$(SHARED_FOLDER) -DEXT_CLINFO -lOpenCL -o $@
 
 clean:
 	rm -rf $(BUILD_FOLDER)

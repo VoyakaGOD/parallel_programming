@@ -8,6 +8,7 @@ void show_device_info(cl_device_id device, int id)
     cl_device_type type;
     cl_uint compute_units = 0;
     cl_ulong global_mem = 0;
+    size_t work_group_size = 0;
 
     clGetDeviceInfo(device, CL_DEVICE_NAME, CONST_BUFFER_SIZE, name, nullptr);
     clGetDeviceInfo(device, CL_DEVICE_VENDOR, CONST_BUFFER_SIZE, vendor, nullptr);
@@ -15,17 +16,35 @@ void show_device_info(cl_device_id device, int id)
     clGetDeviceInfo(device, CL_DEVICE_TYPE, sizeof(type), &type, nullptr);
     clGetDeviceInfo(device, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(compute_units), &compute_units, nullptr);
     clGetDeviceInfo(device, CL_DEVICE_GLOBAL_MEM_SIZE, sizeof(global_mem), &global_mem, nullptr);
+    clGetDeviceInfo(device, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(work_group_size), &work_group_size, nullptr);
+
+#ifdef EXT_CLINFO
+    size_t max_image_width = 0;
+    size_t max_image_height = 0;
+    cl_uint max_images_in = 0;
+    cl_uint max_images_out = 0;
+    cl_uint max_clock_freq = 0;
+    size_t max_parameters = 0;
+
+    clGetDeviceInfo(device, CL_DEVICE_IMAGE2D_MAX_WIDTH, sizeof(max_image_width), &max_image_width, nullptr);
+    clGetDeviceInfo(device, CL_DEVICE_IMAGE2D_MAX_HEIGHT, sizeof(max_image_height), &max_image_height, nullptr);
+    clGetDeviceInfo(device, CL_DEVICE_MAX_READ_IMAGE_ARGS, sizeof(max_images_in), &max_images_in, nullptr);
+    clGetDeviceInfo(device, CL_DEVICE_MAX_WRITE_IMAGE_ARGS, sizeof(max_images_out), &max_images_out, nullptr);
+    clGetDeviceInfo(device, CL_DEVICE_MAX_CLOCK_FREQUENCY, sizeof(max_clock_freq), &max_clock_freq, nullptr);
+    clGetDeviceInfo(device, CL_DEVICE_MAX_PARAMETER_SIZE, sizeof(max_parameters), &max_parameters, nullptr);
+#endif
 
     if(id > -1)
     std::cout << "    Device #" << id << ":\n";
     else
         std::cout << "    Selected device:\n";
-    std::cout << "      Name:           " << name << "\n";
-    std::cout << "      Vendor:         " << vendor << "\n";
-    std::cout << "      Version:        " << version << "\n";
-    std::cout << "      Compute units:  " << compute_units << "\n";
-    std::cout << "      Global memory:  " << (global_mem / (1024 * 1024)) << " Mb\n";
-    std::cout << "      Type:           ";
+    std::cout << "      Name:                " << name << "\n";
+    std::cout << "      Vendor:              " << vendor << "\n";
+    std::cout << "      Version:             " << version << "\n";
+    std::cout << "      Compute units:       " << compute_units << "\n";
+    std::cout << "      Global memory:       " << (global_mem / (1024 * 1024)) << " Mb\n";
+    std::cout << "      Max work group size: " << work_group_size << "\n";
+    std::cout << "      Type:                ";
 
     if(type & CL_DEVICE_TYPE_CPU)
         std::cout << "CPU";
@@ -39,6 +58,16 @@ void show_device_info(cl_device_id device, int id)
         std::cout << "Unknown";
 
     std::cout << std::endl;
+
+#ifdef EXT_CLINFO
+    std::cout << "      Max image width:     " << max_image_width << "\n";
+    std::cout << "      Max image height:    " << max_image_height << "\n";
+    std::cout << "      Max images in:       " << max_images_in << "\n";
+    std::cout << "      Max images out:      " << max_images_out << "\n";
+    std::cout << "      Max clock frequency: " << max_images_out << " MHz\n";
+    std::cout << "      Max parameters size: " << max_parameters << " bytes";
+    std::cout << std::endl;
+#endif
 }
 
 void show_devices_for_platform(cl_platform_id platform)
