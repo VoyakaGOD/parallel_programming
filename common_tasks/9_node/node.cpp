@@ -1,5 +1,6 @@
 #include <require.hpp>
 #include <string>
+#include <cstring>
 #include <iostream>
 #include <vector>
 #include <omp.h>
@@ -7,14 +8,59 @@
 
 typedef double value_t;
 
+typedef void (* lsolver_t)
+(
+    std::vector<value_t> &delta,
+    const std::vector<value_t> &A,
+    const std::vector<value_t> &B,
+    const std::vector<value_t> &C,
+    const std::vector<value_t> &F
+);
+
 struct params_t
 {
-    value_t border_value;
+    lsolver_t solver;
+    int max_iterions;
     value_t epsilon;
     value_t mu;
 };
 
-void solve_CR(std::vector<value_t> &delta, std::vector<value_t> &grid)
+void solve_tridiagonal
+(
+    std::vector<value_t> &delta,
+    const std::vector<value_t> &A,
+    const std::vector<value_t> &B,
+    const std::vector<value_t> &C,
+    const std::vector<value_t> &F
+)
+{
+    int N = delta.size();
+    std::vector<value_t> cp(N, 0.0);
+    std::vector<value_t> dp(N, 0.0);
+
+    cp[0] = C[0] / B[0];
+    dp[0] = -F[0] / B[0];
+
+    for(int i = 1; i < N; i++)
+    {
+        value_t denom = B[i] - A[i] * cp[i-1];
+        cp[i] = (i == N-1) ? 0.0 : (C[i] / denom);
+        dp[i] = -(F[i] + A[i] * dp[i-1]) / denom;
+    }
+
+    delta[N-1] = dp[N-1];
+    for(int i = N-2; i >= 0; i--)
+        delta[i] = dp[i] - cp[i] * delta[i+1];
+}
+
+void solve_CR
+(
+    std::vector<value_t> &delta,
+    const std::vector<value_t> &A,
+    const std::vector<value_t> &B,
+    const std::vector<value_t> &C,
+    const std::vector<value_t> &F
+)
 {
 
 }
@@ -29,42 +75,77 @@ value_t F(int m, const std::vector<value_t> &y, value_t mu)
     return y[m+1] - 2*y[m] + y[m-1] - mu*(f(y[m+1]) + 10*f(y[m]) + f(y[m-1]));
 }
 
-value_t get_F_norm(const std::vector<value_t> &grid, value_t mu)
+value_t get_norm(const std::vector<value_t> &F_values)
 {
-    int N = grid.size();
+    int N = F_values.size();
     value_t sum = 0;
 
     #pragma omp parallel for reduction(+:sum)
-    for(int m = 1; m < N - 1; m++)
-    {
-        value_t val = F(m, grid, mu);
-        sum += val * val;
-    }
+    for(int m = 0; m < N; m++)
+        sum += F_values[m] * F_values[m];
 
     return std::sqrt(sum);
 }
 
 void solve_NODE(std::vector<value_t> &grid, const params_t &params)
 {
-    std::vector<value_t> delta(grid.size());
+    int N = grid.size();
+    std::vector<value_t> delta(N - 2);
+    std::vector<value_t> A(N - 2);
+    std::vector<value_t> B(N - 2);
+    std::vector<value_t> C(N - 2);
+    std::vector<value_t> F_values(N - 2);
 
-    while(get_F_norm(grid, params.mu) > params.epsilon)
-        solve_CR(delta, grid);
+    for(int i = 0; i < params.max_iterions; i++)
+    {
+        #pragma omp parallel for
+        for(int m = 1; m < N - 1; m++)
+        {
+            A[m - 1] = 1 - params.mu * (3*grid[m-1]*grid[m-1] - 1);
+            B[m - 1] = -2 - 10*params.mu * (3*grid[m]*grid[m] - 1);
+            C[m - 1] = 1 - params.mu * (3*grid[m+1]*grid[m+1] - 1);
+            F_values[m - 1] = F(m, grid, params.mu);
+        }
+
+        if(get_norm(F_values) < params.epsilon)
+            break;
+
+        params.solver(delta, A, B, C, F_values);
+
+        #pragma omp parallel for
+        for(int m = 1; m < N - 1; m++)
+            grid[m] += delta[m - 1];
+    }
 }
 
 int main(int argc, char **argv)
 {
     params_t params;
-    params.border_value = std::sqrt(2);
+    params.solver = solve_tridiagonal;
     params.epsilon = 1e-3;
+    params.max_iterions = 1000;
 
-    require(argc == 3, "Usage: node [a] [h]");
+    require(argc >= 3, "Usage: node [a] [h] {seq|CR[threads]|None}");
     double a = std::stod(argv[1]);
     double h = std::stod(argv[2]);
     params.mu = a*h*h / 12;
 
+    if((argc == 4) && !strncmp(argv[3], "CR", 2))
+    {
+        int threads = std::stoi(argv[3] + 2);
+        std::cerr << "solver: cyclic reduction with " << threads << " threads" << std::endl;
+        omp_set_num_threads(threads);
+        params.solver = solve_CR;
+    }
+    else
+    {
+        std::cerr << "solver: sequential" << std::endl;
+        omp_set_num_threads(1);
+        params.solver = solve_tridiagonal;
+    }
+
     int N = static_cast<int>(20 / h);
-    std::vector<value_t> grid(N, params.border_value);
+    std::vector<value_t> grid(N, std::sqrt(2));
     solve_NODE(grid, params);
 
     for(auto value : grid)
