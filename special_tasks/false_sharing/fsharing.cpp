@@ -1,6 +1,7 @@
 #include <require.hpp>
 #include <iostream>
 #include <cstdlib>
+#include <cstdint>
 #include <cstring>
 #include <omp.h>
 
