@@ -8,19 +8,20 @@
 
 typedef double value_t;
 
+// may expect for double size of A,B,C,F
 typedef void (* lsolver_t)
 (
     std::vector<value_t> &delta,
-    const std::vector<value_t> &A,
-    const std::vector<value_t> &B,
-    const std::vector<value_t> &C,
-    const std::vector<value_t> &F
+    std::vector<value_t> &A,
+    std::vector<value_t> &B,
+    std::vector<value_t> &C,
+    std::vector<value_t> &F
 );
 
 struct params_t
 {
     lsolver_t solver;
-    int max_iterions;
+    int max_iterations;
     value_t epsilon;
     value_t mu;
 };
@@ -28,15 +29,15 @@ struct params_t
 void solve_tridiagonal
 (
     std::vector<value_t> &delta,
-    const std::vector<value_t> &A,
-    const std::vector<value_t> &B,
-    const std::vector<value_t> &C,
-    const std::vector<value_t> &F
+    std::vector<value_t> &A,
+    std::vector<value_t> &B,
+    std::vector<value_t> &C,
+    std::vector<value_t> &F
 )
 {
     int N = delta.size();
-    std::vector<value_t> cp(N, 0.0);
-    std::vector<value_t> dp(N, 0.0);
+    std::vector<value_t> cp(N);
+    std::vector<value_t> dp(N);
 
     cp[0] = C[0] / B[0];
     dp[0] = -F[0] / B[0];
@@ -53,16 +54,77 @@ void solve_tridiagonal
         delta[i] = dp[i] - cp[i] * delta[i+1];
 }
 
+void solve_CR_impl
+(
+    std::vector<value_t> &delta,
+    std::vector<value_t>::iterator a,
+    std::vector<value_t>::iterator b,
+    std::vector<value_t>::iterator c,
+    std::vector<value_t>::iterator f,
+    int N,
+    int shift
+)
+{
+    int base = shift - 1;
+
+    // a[0] & c[max] are ignored
+    if (N == 1)
+    {
+        delta[base] = -f[0] / b[0];
+        return;
+    }
+
+    int m = N / 2;
+
+    #pragma omp parallel for
+    for(int i = 0; i < m; i++)
+    {
+        int idx = 2 * i + 1;
+        value_t alpha = (idx - 1 >= 0) ? a[idx] / b[idx - 1] : 0.0;
+        value_t gamma = (idx + 1 < N) ? c[idx] / b[idx + 1] : 0.0;
+
+        a[i + N] = -alpha * a[idx - 1];
+        b[i + N] = b[idx] - alpha * c[idx - 1] - gamma * ((idx + 1 < N) ? a[idx + 1] : 0.0);
+        c[i + N] = -gamma * ((idx + 1 < N) ? c[idx + 1] : 0.0);
+        f[i + N] = f[idx] - alpha * f[idx - 1] - gamma * ((idx + 1 < N) ? f[idx + 1] : 0.0);
+    }
+
+    // solve for odd: x_{i-2} & x_{i} & x_{i+2}, ex: x1 & x3 & x5
+    solve_CR_impl(delta, a + N, b + N, c + N, f + N, m, 2*shift);
+
+    // solve for even: x_{i-1}, ex: x0 & x2 & x4
+    #pragma omp parallel for
+    for(int i = 0; i < m; i++)
+    {
+        int k = 2*i;
+        value_t rhs = -f[k];
+        if(i > 0)
+            rhs -= a[k] * delta[shift*(k-1) + base];
+        if(k + 1 < N)
+            rhs -= c[k] * delta[shift*(k+1) + base];
+        delta[shift*k + base] = rhs / b[k];
+    }
+
+    if(N % 2 == 1)
+        delta[shift*(N-1) + base] = (-f[N-1] - a[N-1] * delta[shift*(N-2) + base]) / b[N-1];
+}
+
 void solve_CR
 (
     std::vector<value_t> &delta,
-    const std::vector<value_t> &A,
-    const std::vector<value_t> &B,
-    const std::vector<value_t> &C,
-    const std::vector<value_t> &F
+    std::vector<value_t> &A,
+    std::vector<value_t> &B,
+    std::vector<value_t> &C,
+    std::vector<value_t> &F
 )
 {
+    size_t size = 2*delta.size();
+    require(A.size() >= size, "A is too short");
+    require(B.size() >= size, "B is too short");
+    require(C.size() >= size, "C is too short");
+    require(F.size() >= size, "F is too short");
 
+    solve_CR_impl(delta, A.begin(), B.begin(), C.begin(), F.begin(), delta.size(), 1);
 }
 
 value_t f(value_t y)
@@ -87,16 +149,17 @@ value_t get_norm(const std::vector<value_t> &F_values)
     return std::sqrt(sum);
 }
 
-void solve_NODE(std::vector<value_t> &grid, const params_t &params)
+int solve_NODE(std::vector<value_t> &grid, const params_t &params)
 {
     int N = grid.size();
     std::vector<value_t> delta(N - 2);
-    std::vector<value_t> A(N - 2);
-    std::vector<value_t> B(N - 2);
-    std::vector<value_t> C(N - 2);
-    std::vector<value_t> F_values(N - 2);
+    std::vector<value_t> A(2*delta.size());
+    std::vector<value_t> B(2*delta.size());
+    std::vector<value_t> C(2*delta.size());
+    std::vector<value_t> F_values(2*delta.size());
 
-    for(int i = 0; i < params.max_iterions; i++)
+    int i = 0;
+    for(;i < params.max_iterations; i++)
     {
         #pragma omp parallel for
         for(int m = 1; m < N - 1; m++)
@@ -116,6 +179,8 @@ void solve_NODE(std::vector<value_t> &grid, const params_t &params)
         for(int m = 1; m < N - 1; m++)
             grid[m] += delta[m - 1];
     }
+
+    return i;
 }
 
 int main(int argc, char **argv)
@@ -123,7 +188,7 @@ int main(int argc, char **argv)
     params_t params;
     params.solver = solve_tridiagonal;
     params.epsilon = 1e-3;
-    params.max_iterions = 1000;
+    params.max_iterations = 1000;
 
     require(argc >= 3, "Usage: node [a] [h] {seq|CR[threads]|None}");
     double a = std::stod(argv[1]);
@@ -146,7 +211,10 @@ int main(int argc, char **argv)
 
     int N = static_cast<int>(20 / h);
     std::vector<value_t> grid(N, std::sqrt(2));
-    solve_NODE(grid, params);
+    double start = omp_get_wtime();
+    int iterations = solve_NODE(grid, params);
+    std::cerr << "iterations: " << iterations << "\n";
+    std::cerr << "time: " << (omp_get_wtime() - start) << " s" << std::endl;
 
     for(auto value : grid)
         std::cout << value << " ";
