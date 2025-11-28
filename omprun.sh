@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# ./run.sh [name] [number of threads] [args...]
+# ./omprun.sh [name] [number of threads] [args...]
 
 name="$1"
 nt="$2"
